@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class EmployeeService implements EmployeeInterface {
@@ -28,5 +29,16 @@ public class EmployeeService implements EmployeeInterface {
     @Override
     public List<Employee> getAll() {
         return employeeRepository.findAll();
+    }
+
+    @Override
+    public Employee editEmployee(long id, EmployeeDTO employee) {
+        Optional<Employee> emp = employeeRepository.findById(id);
+        if (emp.isPresent()) {
+            emp.get().setName(employee.getName());
+            employeeRepository.save(emp.get());
+            return emp.get();
+        }
+        return null;
     }
 }

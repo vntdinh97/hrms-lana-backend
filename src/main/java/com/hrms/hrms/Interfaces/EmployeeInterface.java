@@ -10,4 +10,5 @@ public interface EmployeeInterface {
     Employee addEmployee(EmployeeDTO employee);
     Employee deleteEmployee(long empId);
     List<Employee> getAll();
+    Employee editEmployee(long id, EmployeeDTO employee);
 }

@@ -27,4 +27,9 @@ public class EmpController {
     public ResponseEntity<List<Employee>> getAllEmployee() {
         return new ResponseEntity<List<Employee>>(employeeInterface.getAll(), HttpStatus.OK);
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Employee> editEmployee(@RequestBody EmployeeDTO employee, @PathVariable long id) {
+        return new ResponseEntity<Employee>(employeeInterface.editEmployee(id, employee), HttpStatus.OK);
+    }
 }
