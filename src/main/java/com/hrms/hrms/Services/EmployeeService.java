@@ -2,8 +2,10 @@ package com.hrms.hrms.Services;
 
 import com.hrms.hrms.DTO.EmployeeDTO;
 import com.hrms.hrms.Entities.Employee;
+import com.hrms.hrms.Entities.Shift;
 import com.hrms.hrms.Interfaces.EmployeeInterface;
 import com.hrms.hrms.Repositories.EmployeeRepository;
+import com.hrms.hrms.Repositories.ShiftRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +17,10 @@ public class EmployeeService implements EmployeeInterface {
 
     @Autowired
     EmployeeRepository employeeRepository;
+
+    @Autowired
+    ShiftRepository shiftRepository;
+
     @Override
     public Employee addEmployee(EmployeeDTO employee) {
         Employee emp = new Employee(employee.getName());
@@ -23,7 +29,13 @@ public class EmployeeService implements EmployeeInterface {
 
     @Override
     public Employee deleteEmployee(long empId) {
-        return null;
+        Optional<Employee> emp = employeeRepository.findById(empId);
+
+        if (emp.isPresent()) {
+            shiftRepository.deleteByEmpId(empId);
+            employeeRepository.deleteById(empId);
+        }
+        return emp.get();
     }
 
     @Override

@@ -18,10 +18,6 @@ public class ShiftController {
 
     @PostMapping
     public ResponseEntity<Shift> addShift(@RequestBody ShiftDTO shift) {
-        Shift result = shiftInterface.addShift(shift);
-        if (result != null) {
-            return new ResponseEntity<>(shiftInterface.addShift(shift), HttpStatus.CREATED);
-        }
-        return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<Shift>(shiftInterface.addShift(shift), HttpStatus.CREATED);
     }
 }

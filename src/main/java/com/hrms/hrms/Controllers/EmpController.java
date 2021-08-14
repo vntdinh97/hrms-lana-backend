@@ -32,4 +32,9 @@ public class EmpController {
     public ResponseEntity<Employee> editEmployee(@RequestBody EmployeeDTO employee, @PathVariable long id) {
         return new ResponseEntity<Employee>(employeeInterface.editEmployee(id, employee), HttpStatus.OK);
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Employee> deleteEmployee(@PathVariable long id) {
+        return new ResponseEntity<Employee>(employeeInterface.deleteEmployee(id), HttpStatus.OK);
+    }
 }
