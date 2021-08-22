@@ -11,4 +11,6 @@ public interface EmployeeInterface {
     Employee deleteEmployee(long empId);
     List<Employee> getAll();
     Employee editEmployee(long id, EmployeeDTO employee);
+    Employee authenticate(EmployeeDTO employee);
+    Employee getEmployeeByUsername(String username);
 }

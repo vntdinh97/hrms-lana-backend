@@ -23,7 +23,7 @@ public class EmployeeService implements EmployeeInterface {
 
     @Override
     public Employee addEmployee(EmployeeDTO employee) {
-        Employee emp = new Employee(employee.getName());
+        Employee emp = new Employee(employee.getUsername(), employee.getName(), employee.getPassword(), employee.getRole());
         return employeeRepository.save(emp);
     }
 
@@ -52,5 +52,17 @@ public class EmployeeService implements EmployeeInterface {
             return emp.get();
         }
         return null;
+    }
+
+    @Override
+    public Employee authenticate(EmployeeDTO employee) {
+        System.out.println(this.getEmployeeByUsername(employee.getUsername()));
+        return null;
+    }
+
+    @Override
+    public Employee getEmployeeByUsername(String username) {
+        Employee emp = employeeRepository.getEmployeeByUsername(username);
+        return emp;
     }
 }

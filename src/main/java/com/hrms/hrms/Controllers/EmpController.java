@@ -36,4 +36,9 @@ public class EmpController {
     public ResponseEntity<Employee> deleteEmployee(@PathVariable long id) {
         return new ResponseEntity<Employee>(employeeInterface.deleteEmployee(id), HttpStatus.OK);
     }
+
+    @PostMapping("/login")
+    public ResponseEntity<Employee> login(EmployeeDTO employee) {
+        return new ResponseEntity<Employee>(employeeInterface.authenticate(employee), HttpStatus.OK);
+    }
 }
