@@ -15,30 +15,30 @@ import java.util.List;
 public class EmpController {
 
     @Autowired
-    EmployeeInterface employeeInterface;
+    EmployeeInterface employeeService;
 
     @PostMapping
     public ResponseEntity<Employee> addEmployee(@RequestBody EmployeeDTO employee) {
-        return new ResponseEntity<Employee>(employeeInterface.addEmployee(employee), HttpStatus.CREATED);
+        return new ResponseEntity<Employee>(employeeService.addEmployee(employee), HttpStatus.CREATED);
     }
 
     @GetMapping
     public ResponseEntity<List<Employee>> getAllEmployee() {
-        return new ResponseEntity<List<Employee>>(employeeInterface.getAll(), HttpStatus.OK);
+        return new ResponseEntity<List<Employee>>(employeeService.getAll(), HttpStatus.OK);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<Employee> editEmployee(@RequestBody EmployeeDTO employee, @PathVariable long id) {
-        return new ResponseEntity<Employee>(employeeInterface.editEmployee(id, employee), HttpStatus.OK);
+        return new ResponseEntity<Employee>(employeeService.editEmployee(id, employee), HttpStatus.OK);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Employee> deleteEmployee(@PathVariable long id) {
-        return new ResponseEntity<Employee>(employeeInterface.deleteEmployee(id), HttpStatus.OK);
+        return new ResponseEntity<Employee>(employeeService.deleteEmployee(id), HttpStatus.OK);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Employee> login(EmployeeDTO employee) {
-        return new ResponseEntity<Employee>(employeeInterface.authenticate(employee), HttpStatus.OK);
+    public ResponseEntity<Employee> login(@RequestBody EmployeeDTO employee) {
+        return new ResponseEntity<Employee>(employeeService.authenticate(employee), HttpStatus.OK);
     }
 }

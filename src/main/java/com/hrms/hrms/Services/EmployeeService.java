@@ -3,6 +3,7 @@ package com.hrms.hrms.Services;
 import com.hrms.hrms.DTO.EmployeeDTO;
 import com.hrms.hrms.Entities.Employee;
 import com.hrms.hrms.Entities.Shift;
+import com.hrms.hrms.Enum.Role;
 import com.hrms.hrms.Interfaces.EmployeeInterface;
 import com.hrms.hrms.Repositories.EmployeeRepository;
 import com.hrms.hrms.Repositories.ShiftRepository;
@@ -23,6 +24,9 @@ public class EmployeeService implements EmployeeInterface {
 
     @Override
     public Employee addEmployee(EmployeeDTO employee) {
+        if (employee.getRole() == null) {
+            employee.setRole(Role.USER);
+        }
         Employee emp = new Employee(employee.getUsername(), employee.getName(), employee.getPassword(), employee.getRole());
         return employeeRepository.save(emp);
     }
@@ -30,7 +34,6 @@ public class EmployeeService implements EmployeeInterface {
     @Override
     public Employee deleteEmployee(long empId) {
         Optional<Employee> emp = employeeRepository.findById(empId);
-
         if (emp.isPresent()) {
             shiftRepository.deleteByEmpId(empId);
             employeeRepository.deleteById(empId);
@@ -40,7 +43,11 @@ public class EmployeeService implements EmployeeInterface {
 
     @Override
     public List<Employee> getAll() {
-        return employeeRepository.findAll();
+        List<Employee> employeeList = employeeRepository.findAll();
+        for(Employee emp : employeeList) {
+            emp.setPassword(null);
+        }
+        return employeeList;
     }
 
     @Override
@@ -56,13 +63,22 @@ public class EmployeeService implements EmployeeInterface {
 
     @Override
     public Employee authenticate(EmployeeDTO employee) {
-        System.out.println(this.getEmployeeByUsername(employee.getUsername()));
-        return null;
+        Employee empInDatabase = this.getEmployeeByUsername(employee.getUsername());
+        if (empInDatabase == null || !empInDatabase.getPassword().equals(employee.getPassword())) {
+            try {
+                throw new Exception("Không đúng username hoặc password");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        empInDatabase.setPassword(null);
+        return empInDatabase;
     }
 
     @Override
     public Employee getEmployeeByUsername(String username) {
         Employee emp = employeeRepository.getEmployeeByUsername(username);
+
         return emp;
     }
 }
