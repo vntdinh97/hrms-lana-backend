@@ -9,6 +9,7 @@ import com.hrms.hrms.Repositories.ShiftRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -37,5 +38,10 @@ public class ShiftService implements ShiftInterface {
     @Override
     public Shift deleteShift(long shiftId) {
         return null;
+    }
+
+    @Override
+    public List<Shift> getShiftsByEmpId(long empId) {
+        return shiftRepository.getShiftByEmpId(empId);
     }
 }

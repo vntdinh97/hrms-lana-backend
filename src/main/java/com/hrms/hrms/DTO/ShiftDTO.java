@@ -16,6 +16,8 @@ public class ShiftDTO {
         this.empId = empId;
     }
 
+    public ShiftDTO() {}
+
     public Date getCheckIn() {
         return checkIn;
     }
