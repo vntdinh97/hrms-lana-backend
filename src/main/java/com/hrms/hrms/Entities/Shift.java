@@ -36,6 +36,9 @@ public class Shift implements Serializable {
         this.employee = employee;
     }
 
+    public Shift() {
+    }
+
     public long getShiftId() {
         return shiftId;
     }

@@ -3,12 +3,14 @@ package com.hrms.hrms.Services;
 import com.hrms.hrms.DTO.ShiftDTO;
 import com.hrms.hrms.Entities.Employee;
 import com.hrms.hrms.Entities.Shift;
+import com.hrms.hrms.Utils.ExcelHelper;
 import com.hrms.hrms.Interfaces.ShiftInterface;
 import com.hrms.hrms.Repositories.EmployeeRepository;
 import com.hrms.hrms.Repositories.ShiftRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayInputStream;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,5 +45,13 @@ public class ShiftService implements ShiftInterface {
     @Override
     public List<Shift> getShiftsByEmpId(long empId) {
         return shiftRepository.getShiftByEmpId(empId);
+    }
+
+    @Override
+    public ByteArrayInputStream exportExcel(long empId) {
+        List<Shift> shifts = this.getShiftsByEmpId(empId);
+
+        ByteArrayInputStream in = ExcelHelper.exportToExcel(shifts);
+        return in;
     }
 }
