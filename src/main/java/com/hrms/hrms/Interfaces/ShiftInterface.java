@@ -7,7 +7,7 @@ import java.io.ByteArrayInputStream;
 import java.util.List;
 
 public interface ShiftInterface {
-    Shift addShift(ShiftDTO shift);
+    List<Shift> addShift(ShiftDTO shift) throws Exception;
     Shift deleteShift(long shiftId);
     List<Shift> getShiftsByEmpId(long empId);
     ByteArrayInputStream exportExcel(long empId);

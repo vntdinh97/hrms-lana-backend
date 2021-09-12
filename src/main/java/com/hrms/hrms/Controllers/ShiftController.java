@@ -22,8 +22,8 @@ public class ShiftController {
     ShiftInterface shiftInterface;
 
     @PostMapping
-    public ResponseEntity<Shift> addShift(@RequestBody ShiftDTO shift) {
-        return new ResponseEntity<Shift>(shiftInterface.addShift(shift), HttpStatus.CREATED);
+    public ResponseEntity<List<Shift>> addShift(@RequestBody ShiftDTO shift) throws Exception {
+        return new ResponseEntity<List<Shift>>(shiftInterface.addShift(shift), HttpStatus.CREATED);
     }
 
     @GetMapping("/{empId}")
