@@ -78,7 +78,15 @@ public class EmployeeService implements EmployeeInterface {
     @Override
     public Employee getEmployeeByUsername(String username) {
         Employee emp = employeeRepository.getEmployeeByUsername(username);
-
         return emp;
+    }
+
+    @Override
+    public Employee getEmployeeByEmpId(long empId) {
+        Optional<Employee> emp = employeeRepository.findById(empId);
+        if (emp.isPresent()) {
+            return emp.get();
+        }
+        return null;
     }
 }
