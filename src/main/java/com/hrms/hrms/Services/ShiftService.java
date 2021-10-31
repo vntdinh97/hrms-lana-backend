@@ -24,47 +24,39 @@ public class ShiftService implements ShiftInterface {
     @Override
     public List<Shift> addShift(ShiftDTO shift) {
         Optional<Employee> emp = employeeRepository.findById(shift.getEmpId());
+        List<Shift> shifts = new ArrayList<>();
         if (emp.isPresent()) {
             Calendar checkIn = Calendar.getInstance();
             checkIn.setTime(shift.getCheckIn());
 
             Calendar checkOut = Calendar.getInstance();
-            checkIn.setTime(shift.getCheckOut());
-            List<Shift> shifts = new ArrayList<Shift>();
+            checkOut.setTime(shift.getCheckOut());
 
-            //Separate into 2 shifts if it lays 2 days
+            //Separate into 2 shifts if it lies on 2 days
             if (checkIn.get(Calendar.DAY_OF_MONTH) != checkOut.get(Calendar.DAY_OF_MONTH)) {
-                Calendar cal = Calendar.getInstance();
-                cal.setTime(shift.getCheckIn());
-                cal.set(Calendar.HOUR_OF_DAY,23);
-                cal.set(Calendar.MINUTE,59);
-                cal.set(Calendar.SECOND,59);
+                Calendar splitPoint = Calendar.getInstance();
+                splitPoint.setTime(shift.getCheckOut());
+                splitPoint.set(Calendar.HOUR_OF_DAY,0);
+                splitPoint.set(Calendar.MINUTE,0);
+                splitPoint.set(Calendar.SECOND,0);
 
-                Date fistPartCheckOut = cal.getTime();
-                Shift firstPart = new Shift(shift.getCheckIn(), fistPartCheckOut, shift.getRemark(), emp.get());
+                Date splitPointTime = splitPoint.getTime();
+                Shift firstPart = new Shift(shift.getCheckIn(), splitPointTime, shift.getRemark(), emp.get());
                 shiftRepository.save(firstPart);
                 shifts.add(firstPart);
 
-                Calendar cal = Calendar.getInstance();
-                cal.set(Calendar.HOUR_OF_DAY,23);
-                cal.set(Calendar.MINUTE,59);
-                cal.set(Calendar.SECOND,59);
-
-                Date fistPartCheckOut = cal.getTime();
-                Shift firstPart = new Shift(shift.getCheckIn(), fistPartCheckOut, shift.getRemark(), emp.get());
-                shiftRepository.save(firstPart);
-                shifts.add(firstPart);
+                Shift secondPart = new Shift(splitPointTime, shift.getCheckOut(), shift.getRemark(), emp.get());
+                shiftRepository.save(secondPart);
+                shifts.add(secondPart);
+                return shifts;
             } else {
                 Shift newShift = new Shift(shift.getCheckIn(), shift.getCheckOut(), shift.getRemark(), emp.get());
                 Shift result = shiftRepository.save(newShift);
-                return result;
+                shifts.add(result);
+                return shifts;
             }
 
-            try {
 
-            } catch (Exception e) {
-                System.out.println(e);
-            }
         }
         return null;
     }
@@ -82,8 +74,8 @@ public class ShiftService implements ShiftInterface {
     @Override
     public ByteArrayInputStream exportExcel(long empId, int month) {
         List<Shift> shifts = this.getShiftsByEmpId(empId);
-        shifts.stream().filter(x -> )
-        ByteArrayInputStream in = ExcelHelper.exportToExcelByEmp(shifts);
+        shifts.stream().filter(x -> x.getCheckOut().getMonth() == month);
+        ByteArrayInputStream in = ExcelHelper.exportToExcelByEmp(shifts, month);
         return in;
     }
 

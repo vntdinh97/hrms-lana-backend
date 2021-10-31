@@ -28,7 +28,7 @@ public class ShiftController {
 
     @PostMapping
     public ResponseEntity<List<Shift>> addShift(@RequestBody ShiftDTO shift) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(shiftInterface.addShift(shift));
+        return new ResponseEntity<List<Shift>>(shiftInterface.addShift(shift), HttpStatus.CREATED);
     }
 
     @GetMapping("/{empId}")
