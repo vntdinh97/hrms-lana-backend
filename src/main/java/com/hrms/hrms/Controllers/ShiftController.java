@@ -36,12 +36,12 @@ public class ShiftController {
         return new ResponseEntity<List<Shift>>(shiftInterface.getShiftsByEmpId(empId), HttpStatus.OK);
     }
 
-    @GetMapping("/exportExcel/{empId}/{month}")
-    public ResponseEntity<Resource> exportExcel(@PathVariable long empId, @PathVariable int month) {
+    @GetMapping("/exportExcel/{empId}/{year}/{month}")
+    public ResponseEntity<Resource> exportExcel(@PathVariable long empId, @PathVariable int year, @PathVariable int month) {
         Employee employee = this.employeeInterface.getEmployeeByEmpId(empId);
 //        String monthName = Helper.getMonthForInt(month);
-        String filename = "TS_"+(month+1)+"2021"+employee.getName()+".xlsx";
-        InputStreamResource file = new InputStreamResource(shiftInterface.exportExcel(empId, month));
+        String filename = "TS_"+(month+1)+"_"+year+"_"+employee.getName()+".xlsx";
+        InputStreamResource file = new InputStreamResource(shiftInterface.exportExcel(empId, year, month));
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)

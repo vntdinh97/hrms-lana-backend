@@ -72,10 +72,11 @@ public class ShiftService implements ShiftInterface {
     }
 
     @Override
-    public ByteArrayInputStream exportExcel(long empId, int month) {
+    public ByteArrayInputStream exportExcel(long empId, int year, int month) {
         List<Shift> shifts = this.getShiftsByEmpId(empId);
+        Optional<Employee> emp = employeeRepository.findById(empId);
         shifts.stream().filter(x -> x.getCheckOut().getMonth() == month);
-        ByteArrayInputStream in = ExcelHelper.exportToExcelByEmp(shifts, month);
+        ByteArrayInputStream in = ExcelHelper.exportToExcelByEmp(shifts, year, month, emp.get().getName());
         return in;
     }
 

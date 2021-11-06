@@ -10,4 +10,9 @@ public class Helper {
     }
 
     public static SimpleDateFormat dateTimeFormatter = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+
+    public static String getDayName(int day) {
+        String[] dayNames = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+        return dayNames[day];
+    }
 }
