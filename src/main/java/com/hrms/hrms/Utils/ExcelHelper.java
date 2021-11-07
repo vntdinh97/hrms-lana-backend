@@ -5,10 +5,7 @@ import com.microsoft.schemas.office.visio.x2012.main.CellType;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.openxml4j.opc.OPCPackage;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
@@ -24,12 +21,13 @@ public class ExcelHelper {
     static String[] HEADERs = { "Id", "Checkin", "Checkout", "Remark" };
     static String SHEET = "Shifts in "+Helper.getMonthForInt(new Date().getMonth());
 
-    public static ByteArrayInputStream exportToExcelByEmp(List<Shift> shifts,int year, int month, String sheetName) {
+    public static ByteArrayOutputStream exportToExcelByEmp(List<Shift> shifts,int year, int month, String sheetName) {
 
 //        src/main/java/com/hrms/hrms/Utils/Template.xlsx"
 //        src/main/java/com/hrms/hrms/Utils/Template.xlsx
-        try (FileInputStream file = new FileInputStream("src/main/java/com/hrms/hrms/Utils/Template.xlsx");
-             XSSFWorkbook workbook = new XSSFWorkbook(file);) {
+        try (
+                Workbook workbook = WorkbookFactory.create(OPCPackage.open("src/main/java/com/hrms/hrms/Utils/Template.xlsx"));
+             ByteArrayOutputStream out = new ByteArrayOutputStream();) {
                 Sheet sheet = workbook.createSheet("123");
 //            Sheet sheet = workbook.getSheetAt(0);
             workbook.setSheetName(0, sheetName);
@@ -55,11 +53,11 @@ public class ExcelHelper {
                 rowNum++;
                 dayIndex++;
             }
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
+
             workbook.write(out);
 //            workbook.close();
-            out.close();
-            return new ByteArrayInputStream(out.toByteArray());
+
+            return out;
         } catch (Exception e) {
             throw new RuntimeException("Fail to import data to Excel file: " + e);
         }
