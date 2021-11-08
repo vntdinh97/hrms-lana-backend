@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Calendar;
 import java.util.List;
 
 @Repository
@@ -20,4 +21,7 @@ public interface ShiftRepository extends JpaRepository<Shift, Long> {
 
     @Query(value = "select * from shift where emp_id = :emp_id", nativeQuery = true)
     List<Shift> getShiftByEmpId(@Param("emp_id") long empId);
+
+    @Query(value = "select * from shift where emp_id = :emp_id and cast(checkin as date) = :date", nativeQuery = true)
+    List<Shift> getShiftByEmpIdAndDate(@Param("emp_id") long empId, @Param("date") Calendar date);
 }
