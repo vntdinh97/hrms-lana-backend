@@ -50,12 +50,13 @@ public class ShiftService implements ShiftInterface {
             checkOut.set(Calendar.MILLISECOND, 0);
 
             //Separate into 2 shifts if it lies on 2 days
-            if (checkIn.get(Calendar.DAY_OF_MONTH) != checkOut.get(Calendar.DAY_OF_MONTH)) {
+
+            if (checkIn.get(Calendar.DAY_OF_MONTH) != checkOut.get(Calendar.DAY_OF_MONTH) && checkIn.get(Calendar.DAY_OF_WEEK) == 1) {
                 Calendar splitPoint = Calendar.getInstance();
                 splitPoint.setTime(shift.getCheckOut());
-                splitPoint.set(Calendar.HOUR_OF_DAY,0);
-                splitPoint.set(Calendar.MINUTE,0);
-                splitPoint.set(Calendar.SECOND,0);
+                splitPoint.set(Calendar.HOUR_OF_DAY, 0);
+                splitPoint.set(Calendar.MINUTE, 0);
+                splitPoint.set(Calendar.SECOND, 0);
 
                 Date splitPointTime = splitPoint.getTime();
                 Shift firstPart = new Shift(shift.getCheckIn(), splitPointTime, shift.getRemark(), emp.get());
@@ -65,15 +66,12 @@ public class ShiftService implements ShiftInterface {
                 Shift secondPart = new Shift(splitPointTime, shift.getCheckOut(), shift.getRemark(), emp.get());
                 shiftRepository.save(secondPart);
                 shifts.add(secondPart);
-                return shifts;
             } else {
                 Shift newShift = new Shift(shift.getCheckIn(), shift.getCheckOut(), shift.getRemark(), emp.get());
                 Shift result = shiftRepository.save(newShift);
                 shifts.add(result);
-                return shifts;
             }
-
-
+            return shifts;
         }
         return null;
     }
@@ -90,19 +88,15 @@ public class ShiftService implements ShiftInterface {
 
     @Override
     public ByteArrayInputStream exportExcel(long empId, int year, int month) {
-        List<Shift> shifts = this.getShiftsByEmpId(empId);
         Optional<Employee> emp = employeeRepository.findById(empId);
-        shifts.stream().filter(x -> x.getCheckOut().getMonth() == month);
         try (
                 InputStream inp = new FileInputStream("src/main/java/com/hrms/hrms/Utils/Template.xlsx");
                 Workbook workbook = WorkbookFactory.create(inp);
                 ByteArrayOutputStream out = new ByteArrayOutputStream();) {
-//            Sheet sheet = workbook.createSheet("123");
             Sheet sheet = workbook.getSheetAt(0);
-//            workbook.setSheetName(0, emp.get().getName());
 
             int numberOfDays = YearMonth.of(year, month).lengthOfMonth();
-            int rowNum = 7, celNum = 0, dayIndex = 1;
+            int rowNum = 7, dayIndex = 1;
 
             SimpleDateFormat formatDate = new SimpleDateFormat("yyyy-MM-dd");
             SimpleDateFormat formatHour = new SimpleDateFormat("HH:mm");
@@ -114,7 +108,8 @@ public class ShiftService implements ShiftInterface {
             subTotalFont.setFontName("Calibri");
             subTotalFont.setFontHeightInPoints((short) 10);
             subTotalCellStyle.setAlignment(HorizontalAlignment.CENTER);
-
+            String[] dayOffs = new String[]{"Annual leave", "Compensatory day"};
+            String[] traveling = new String[]{"Annual leave", "Compensatory day"};
             subTotalCellStyle.setFont(subTotalFont);
             while (dayIndex <= numberOfDays) {
                 Row row = sheet.createRow(rowNum);
@@ -129,35 +124,78 @@ public class ShiftService implements ShiftInterface {
                 dayOfWeek.setCellValue(Helper.getDayName(calendar.get(Calendar.DAY_OF_WEEK) - 1));
 //                row.createCell(1).setCellValue(new SimpleDateFormat("HH:mm").format(calendar));
 
-                // Checkin, out and working time
-                String dateAsString = formatDate.format(calendar.getTime());
-                System.out.println(dateAsString);
                 List<Shift> shiftInDate = this.shiftRepository.getShiftByEmpIdAndDate(empId, calendar);
-                if (shiftInDate.size() == 1) {
-                    Cell start = row.createCell(2);
-                    start.setCellValue(formatHour.format(shiftInDate.get(0).getCheckIn()));
 
-                    Cell stop = row.createCell(3);
-                    stop.setCellValue(formatHour.format(shiftInDate.get(0).getCheckOut()));
-                }
-                if (shiftInDate.size() > 1) {
-                    int startRowNum = rowNum;
-                    for (int i = 0; i < shiftInDate.size(); i++) {
+                // Checkin, out and working time
+//                if (shiftInDate.size() == 1) {
+//                    if (!Arrays.stream(dayOffs).anyMatch(shiftInDate.get(0).getRemark()::equals)) {
+//                        Cell start = row.createCell(2);
+//                        start.setCellValue(formatHour.format(shiftInDate.get(0).getCheckIn()));
+//
+//                        Cell stop = row.createCell(3);
+//                        stop.setCellValue(formatHour.format(shiftInDate.get(0).getCheckOut()));
+//
+//                        //working hour
+////
+//
+//                        // Cell 4 and 5
+//
+//                    }
+//                }
+//                if (shiftInDate.size() > 1) {
+                int startRowNum = rowNum;
+                for (int i = 0; i < shiftInDate.size(); i++) {
+                    if (!Arrays.stream(dayOffs).anyMatch(shiftInDate.get(0).getRemark()::equals)) {
                         Cell start = row.createCell(2);
                         start.setCellValue(formatHour.format(shiftInDate.get(i).getCheckIn()));
 
                         Cell stop = row.createCell(3);
                         stop.setCellValue(formatHour.format(shiftInDate.get(i).getCheckOut()));
-                        if (i != shiftInDate.size() - 1) {
-                            rowNum++;
-                            row = sheet.createRow(rowNum);
+
+                        Calendar checkIn = Calendar.getInstance();
+                        checkIn.setTime(shiftInDate.get(0).getCheckIn());
+                        Calendar checkOut = Calendar.getInstance();
+                        checkOut.setTime(shiftInDate.get(0).getCheckOut());
+                        long workingHours = calculateWorkingHour(shiftInDate.get(0).getCheckIn(), shiftInDate.get(0).getCheckOut());
+
+                        if (checkOut.get(Calendar.HOUR_OF_DAY) > 22 || checkOut.get(Calendar.HOUR_OF_DAY) <= 6) { // night shift
+                            if (workingHours > 8 && !shiftInDate.get(i).getRemark().toLowerCase(Locale.ROOT).contains("travel")) { // OT
+                                Cell nightTimeOT = row.createCell(7);
+                                nightTimeOT.setCellValue(workingHours - 8);
+                                Cell nightTime = row.createCell(5);
+                                nightTime.setCellValue(8);
+                            } else { // normal
+                                Cell nightTime = row.createCell(5);
+                                nightTime.setCellValue(workingHours);
+                            }
+                        } else { // daytime shift
+                            if (workingHours > 8 && !shiftInDate.get(i).getRemark().toLowerCase(Locale.ROOT).contains("travel")) { //OT
+                                Cell dayTimeOT = row.createCell(6);
+                                dayTimeOT.setCellValue(workingHours - 8);
+                                Cell dayTime = row.createCell(4);
+                                dayTime.setCellValue(8);
+                            } else {
+                                Cell dayTime = row.createCell(4);
+                                dayTime.setCellValue(workingHours);
+                            }
                         }
                     }
-                    int stopRowNum = rowNum;
+                    if (i != shiftInDate.size() - 1) {
+                        rowNum++;
+                        row = sheet.createRow(rowNum);
+                    }
+
+                    // remark
+                    Cell remark = row.createCell(13);
+                    remark.setCellValue(shiftInDate.get(i).getRemark());
+                }
+                int stopRowNum = rowNum;
+
+                if (startRowNum != stopRowNum) {
                     sheet.addMergedRegion(new CellRangeAddress(startRowNum, stopRowNum, 0, 0));
                     sheet.addMergedRegion(new CellRangeAddress(startRowNum, stopRowNum, 1, 1));
                 }
-
+//                }
                 // Subtotal Row
                 if (calendar.get(Calendar.DAY_OF_WEEK) == 1) {
                     rowNum++;
@@ -183,5 +221,22 @@ public class ShiftService implements ShiftInterface {
     @Override
     public ByteArrayInputStream exportAllShift(int month) {
         return null;
+    }
+
+    @Override
+    public Shift editShift(long shiftId, ShiftDTO shiftDTO) {
+        Optional<Shift> shiftOptional = this.shiftRepository.findById(shiftId);
+        if (shiftOptional.isPresent()) {
+            Shift shift = shiftOptional.get();
+            shift.setCheckIn(shiftDTO.getCheckIn());
+            shift.setCheckOut(shiftDTO.getCheckOut());
+            shift.setRemark(shiftDTO.getRemark());
+            return this.shiftRepository.save(shift);
+        }
+        return null;
+    }
+
+    private long calculateWorkingHour(Date checkIn, Date checkOut) {
+        return Math.round();
     }
 }

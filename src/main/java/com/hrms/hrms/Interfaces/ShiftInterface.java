@@ -12,4 +12,5 @@ public interface ShiftInterface {
     List<Shift> getShiftsByEmpId(long empId);
     ByteArrayInputStream exportExcel(long empId,int year, int month);
     ByteArrayInputStream exportAllShift(int month);
+    Shift editShift(long shiftId, ShiftDTO shift);
 }

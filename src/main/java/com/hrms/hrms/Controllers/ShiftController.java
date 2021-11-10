@@ -59,4 +59,9 @@ public class ShiftController {
                 .contentType(MediaType.parseMediaType("application/vnd.ms-excel"))
                 .body(file);
     }
+
+    @PutMapping("/edit/{shiftId}")
+    public ResponseEntity<Shift> editShift(@PathVariable long shiftId, @RequestBody ShiftDTO shift) {
+        return new ResponseEntity<Shift>(shiftInterface.editShift(shiftId, shift), HttpStatus.OK);
+    }
 }
