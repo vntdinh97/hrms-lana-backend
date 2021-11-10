@@ -237,6 +237,6 @@ public class ShiftService implements ShiftInterface {
     }
 
     private long calculateWorkingHour(Date checkIn, Date checkOut) {
-        return Math.round();
+        return Math.floorDiv((checkOut.getTime() - checkIn.getTime()), 3600000);
     }
 }
