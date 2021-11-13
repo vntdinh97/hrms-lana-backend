@@ -13,9 +13,12 @@ public class HolidayConfig {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private long dayId;
 
-    @Column(name = "date")
+    @Column(name = "date", nullable = false)
     private int date;
 
-    @Column(name = "month")
+    @Column(name = "month", nullable = false)
     private int month;
+
+    @Column(name = "year", nullable = true)
+    private int year;
 }

@@ -42,12 +42,14 @@ public class ShiftService implements ShiftInterface {
             checkIn.set(Calendar.MINUTE, 0);
             checkIn.set(Calendar.SECOND, 0);
             checkIn.set(Calendar.MILLISECOND, 0);
+            shift.setCheckIn(checkIn.getTime());
 
             Calendar checkOut = Calendar.getInstance();
             checkOut.setTime(shift.getCheckOut());
             checkOut.set(Calendar.MINUTE, 0);
             checkOut.set(Calendar.SECOND, 0);
             checkOut.set(Calendar.MILLISECOND, 0);
+            shift.setCheckOut(checkOut.getTime());
 
             //Separate into 2 shifts if it lies on 2 days
 
@@ -59,15 +61,15 @@ public class ShiftService implements ShiftInterface {
                 splitPoint.set(Calendar.SECOND, 0);
 
                 Date splitPointTime = splitPoint.getTime();
-                Shift firstPart = new Shift(shift.getCheckIn(), splitPointTime, shift.getRemark(), emp.get());
+                Shift firstPart = new Shift(shift.getCheckIn(), splitPointTime, shift.getRemark(), emp.get(), false);
                 shiftRepository.save(firstPart);
                 shifts.add(firstPart);
 
-                Shift secondPart = new Shift(splitPointTime, shift.getCheckOut(), shift.getRemark(), emp.get());
+                Shift secondPart = new Shift(splitPointTime, shift.getCheckOut(), shift.getRemark(), emp.get(), true);
                 shiftRepository.save(secondPart);
                 shifts.add(secondPart);
             } else {
-                Shift newShift = new Shift(shift.getCheckIn(), shift.getCheckOut(), shift.getRemark(), emp.get());
+                Shift newShift = new Shift(shift.getCheckIn(), shift.getCheckOut(), shift.getRemark(), emp.get(), false);
                 Shift result = shiftRepository.save(newShift);
                 shifts.add(result);
             }
@@ -78,6 +80,10 @@ public class ShiftService implements ShiftInterface {
 
     @Override
     public Shift deleteShift(long shiftId) {
+        Optional<Shift> shift = this.shiftRepository.findById(shiftId);
+        if (shift.isPresent()) {
+            this.shiftRepository.delete(shift.get());
+        }
         return null;
     }
 
@@ -109,7 +115,7 @@ public class ShiftService implements ShiftInterface {
             subTotalFont.setFontHeightInPoints((short) 10);
             subTotalCellStyle.setAlignment(HorizontalAlignment.CENTER);
             String[] dayOffs = new String[]{"Annual leave", "Compensatory day"};
-            String[] traveling = new String[]{"Annual leave", "Compensatory day"};
+
             subTotalCellStyle.setFont(subTotalFont);
             while (dayIndex <= numberOfDays) {
                 Row row = sheet.createRow(rowNum);
@@ -145,36 +151,59 @@ public class ShiftService implements ShiftInterface {
 //                if (shiftInDate.size() > 1) {
                 int startRowNum = rowNum;
                 for (int i = 0; i < shiftInDate.size(); i++) {
-                    if (!Arrays.stream(dayOffs).anyMatch(shiftInDate.get(0).getRemark()::equals)) {
+                    Shift shift = shiftInDate.get(i);
+                    if (!Arrays.stream(dayOffs).anyMatch(shift.getRemark()::equals)) {
                         Cell start = row.createCell(2);
-                        start.setCellValue(formatHour.format(shiftInDate.get(i).getCheckIn()));
+                        start.setCellValue(formatHour.format(shift.getCheckIn()));
 
                         Cell stop = row.createCell(3);
-                        stop.setCellValue(formatHour.format(shiftInDate.get(i).getCheckOut()));
+                        stop.setCellValue(formatHour.format(shift.getCheckOut()));
 
                         Calendar checkIn = Calendar.getInstance();
-                        checkIn.setTime(shiftInDate.get(0).getCheckIn());
+                        checkIn.setTime(shift.getCheckIn());
                         Calendar checkOut = Calendar.getInstance();
-                        checkOut.setTime(shiftInDate.get(0).getCheckOut());
-                        long workingHours = calculateWorkingHour(shiftInDate.get(0).getCheckIn(), shiftInDate.get(0).getCheckOut());
+                        checkOut.setTime(shift.getCheckOut());
+                        long workingHours = calculateWorkingHour(shift.getCheckIn(), shift.getCheckOut());
 
                         if (checkOut.get(Calendar.HOUR_OF_DAY) > 22 || checkOut.get(Calendar.HOUR_OF_DAY) <= 6) { // night shift
-                            if (workingHours > 8 && !shiftInDate.get(i).getRemark().toLowerCase(Locale.ROOT).contains("travel")) { // OT
+                            if (workingHours > 8 && !shift.getRemark().toLowerCase(Locale.ROOT).contains("travel")) { // OT
                                 Cell nightTimeOT = row.createCell(7);
                                 nightTimeOT.setCellValue(workingHours - 8);
                                 Cell nightTime = row.createCell(5);
                                 nightTime.setCellValue(8);
-                            } else { // normal
+                            } else if (calendar.get(Calendar.DAY_OF_WEEK) == 1 || calendar.get(Calendar.DAY_OF_WEEK) == 7) { // OT Weekend
+                                if (calendar.get(Calendar.DAY_OF_WEEK) == 7) { // sat
+                                    if (workingHours <= 2) {
+                                        Cell nightTime = row.createCell(5);
+                                        nightTime.setCellValue(workingHours);
+                                    } else {
+                                        Cell nightTime = row.createCell(5);
+                                        nightTime.setCellValue(2);
+                                        row.createCell(9).setCellValue(workingHours - 2);
+                                    }
+                                } else { //sun
+                                    row.createCell(9).setCellValue(workingHours);
+                                }
+                            }
+
+                            else { // normal
                                 Cell nightTime = row.createCell(5);
+                                if (shift.isTrans()) {
+                                    nightTime = row.createCell(7);
+                                }
                                 nightTime.setCellValue(workingHours);
                             }
                         } else { // daytime shift
-                            if (workingHours > 8 && !shiftInDate.get(i).getRemark().toLowerCase(Locale.ROOT).contains("travel")) { //OT
+                            if (workingHours > 8 && !shift.getRemark().toLowerCase(Locale.ROOT).contains("travel") && calendar.get(Calendar.DAY_OF_WEEK) != 1) { //OT
                                 Cell dayTimeOT = row.createCell(6);
                                 dayTimeOT.setCellValue(workingHours - 8);
                                 Cell dayTime = row.createCell(4);
                                 dayTime.setCellValue(8);
-                            } else {
+                            } else if (calendar.get(Calendar.DAY_OF_WEEK) == 1) { //OT sun
+                                Cell dayTime = row.createCell(8);
+                                dayTime.setCellValue(workingHours);
+                            }
+                            else {
                                 Cell dayTime = row.createCell(4);
                                 dayTime.setCellValue(workingHours);
                             }
@@ -187,7 +216,7 @@ public class ShiftService implements ShiftInterface {
 
                     // remark
                     Cell remark = row.createCell(13);
-                    remark.setCellValue(shiftInDate.get(i).getRemark());
+                    remark.setCellValue(shift.getRemark());
                 }
                 int stopRowNum = rowNum;
 

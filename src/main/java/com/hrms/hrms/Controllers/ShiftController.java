@@ -64,4 +64,9 @@ public class ShiftController {
     public ResponseEntity<Shift> editShift(@PathVariable long shiftId, @RequestBody ShiftDTO shift) {
         return new ResponseEntity<Shift>(shiftInterface.editShift(shiftId, shift), HttpStatus.OK);
     }
+
+    @DeleteMapping("/{shiftId}")
+    public ResponseEntity<Shift> deleteShift(@PathVariable long shiftId) {
+        return new ResponseEntity<Shift>(shiftInterface.deleteShift(shiftId), HttpStatus.OK);
+    }
 }

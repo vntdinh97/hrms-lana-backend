@@ -25,15 +25,27 @@ public class Shift implements Serializable {
     @Column(name = "remark", nullable = true)
     private String remark;
 
+    @Column(name = "trans", nullable = true)
+    private boolean trans;
+
     @ManyToOne
     @JoinColumn(name = "empId", nullable = false)
     private Employee employee;
 
-    public Shift(Date checkIn, Date checkOut, String remark, Employee employee) {
+    public Shift(Date checkIn, Date checkOut, String remark, Employee employee, boolean trans) {
         this.checkIn = checkIn;
         this.checkOut = checkOut;
         this.remark = remark;
         this.employee = employee;
+        this.trans = trans;
+    }
+
+    public boolean isTrans() {
+        return trans;
+    }
+
+    public void setTrans(boolean trans) {
+        this.trans = trans;
     }
 
     public Shift() {
