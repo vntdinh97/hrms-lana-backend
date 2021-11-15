@@ -2,7 +2,9 @@ package com.hrms.hrms.Services;
 
 import com.hrms.hrms.DTO.ShiftDTO;
 import com.hrms.hrms.Entities.Employee;
+import com.hrms.hrms.Entities.HolidayConfig;
 import com.hrms.hrms.Entities.Shift;
+import com.hrms.hrms.Repositories.HolidayRepository;
 import com.hrms.hrms.Utils.ExcelHelper;
 import com.hrms.hrms.Interfaces.ShiftInterface;
 import com.hrms.hrms.Repositories.EmployeeRepository;
@@ -31,6 +33,8 @@ public class ShiftService implements ShiftInterface {
     EmployeeRepository employeeRepository;
     @Autowired
     ShiftRepository shiftRepository;
+    @Autowired
+    HolidayRepository holidayRepository;
 
     @Override
     public List<Shift> addShift(ShiftDTO shift) {
@@ -51,9 +55,11 @@ public class ShiftService implements ShiftInterface {
             checkOut.set(Calendar.MILLISECOND, 0);
             shift.setCheckOut(checkOut.getTime());
 
-            //Separate into 2 shifts if it lies on 2 days
+            //Separate into 2 shifts if it lies on Sunday night, Compensatory days, and holidays
+            boolean isHoliday = holidayRepository.isHoliday(checkIn.get(Calendar.DAY_OF_MONTH), checkIn.get(Calendar.MONTH) + 1, checkIn.get(Calendar.YEAR))
+                    || holidayRepository.isHoliday(checkOut.get(Calendar.DAY_OF_MONTH), checkOut.get(Calendar.MONTH) + 1, checkOut.get(Calendar.YEAR));
 
-            if (checkIn.get(Calendar.DAY_OF_MONTH) != checkOut.get(Calendar.DAY_OF_MONTH) && checkIn.get(Calendar.DAY_OF_WEEK) == 1) {
+            if (checkIn.get(Calendar.DAY_OF_MONTH) != checkOut.get(Calendar.DAY_OF_MONTH) && (checkIn.get(Calendar.DAY_OF_WEEK) == 1 || isHoliday)) {
                 Calendar splitPoint = Calendar.getInstance();
                 splitPoint.setTime(shift.getCheckOut());
                 splitPoint.set(Calendar.HOUR_OF_DAY, 0);
@@ -117,6 +123,9 @@ public class ShiftService implements ShiftInterface {
             String[] dayOffs = new String[]{"Annual leave", "Compensatory day"};
 
             subTotalCellStyle.setFont(subTotalFont);
+
+            int dayTotalOT = 0, weekTotalOT = 0, weekTotal = 0;
+            int wh = 0, nswd = 0, otwd = 0, otnswd = 0, otdo = 0, otnsdo = 0, otph = 0, otnsph = 0, grandTotal = 0;
             while (dayIndex <= numberOfDays) {
                 Row row = sheet.createRow(rowNum);
 
@@ -151,6 +160,7 @@ public class ShiftService implements ShiftInterface {
 //                if (shiftInDate.size() > 1) {
                 int startRowNum = rowNum;
                 for (int i = 0; i < shiftInDate.size(); i++) {
+
                     Shift shift = shiftInDate.get(i);
                     if (!Arrays.stream(dayOffs).anyMatch(shift.getRemark()::equals)) {
                         Cell start = row.createCell(2);
@@ -165,24 +175,37 @@ public class ShiftService implements ShiftInterface {
                         checkOut.setTime(shift.getCheckOut());
                         long workingHours = calculateWorkingHour(shift.getCheckIn(), shift.getCheckOut());
 
+                        boolean isHoliday = holidayRepository.isHoliday(checkIn.get(Calendar.DAY_OF_MONTH), checkIn.get(Calendar.MONTH) + 1, checkIn.get(Calendar.YEAR));
+
                         if (checkOut.get(Calendar.HOUR_OF_DAY) > 22 || checkOut.get(Calendar.HOUR_OF_DAY) <= 6) { // night shift
                             if (workingHours > 8 && !shift.getRemark().toLowerCase(Locale.ROOT).contains("travel")) { // OT
                                 Cell nightTimeOT = row.createCell(7);
                                 nightTimeOT.setCellValue(workingHours - 8);
+                                dayTotalOT += workingHours - 8;
                                 Cell nightTime = row.createCell(5);
                                 nightTime.setCellValue(8);
-                            } else if (calendar.get(Calendar.DAY_OF_WEEK) == 1 || calendar.get(Calendar.DAY_OF_WEEK) == 7) { // OT Weekend
+                                weekTotal += 8;
+                            } else if (isHoliday) { // night holiday
+                                Cell nightTimeHoliday = row.createCell(11);
+                                nightTimeHoliday.setCellValue(workingHours);
+                                dayTotalOT += workingHours;
+                            }
+                            else if (calendar.get(Calendar.DAY_OF_WEEK) == 1 || calendar.get(Calendar.DAY_OF_WEEK) == 7) { // OT Weekend
                                 if (calendar.get(Calendar.DAY_OF_WEEK) == 7) { // sat
                                     if (workingHours <= 2) {
                                         Cell nightTime = row.createCell(5);
                                         nightTime.setCellValue(workingHours);
+                                        weekTotal += workingHours;
                                     } else {
                                         Cell nightTime = row.createCell(5);
                                         nightTime.setCellValue(2);
+                                        weekTotal += 2;
                                         row.createCell(9).setCellValue(workingHours - 2);
+                                        dayTotalOT += workingHours - 2;
                                     }
                                 } else { //sun
                                     row.createCell(9).setCellValue(workingHours);
+                                    dayTotalOT += workingHours;
                                 }
                             }
 
@@ -190,6 +213,9 @@ public class ShiftService implements ShiftInterface {
                                 Cell nightTime = row.createCell(5);
                                 if (shift.isTrans()) {
                                     nightTime = row.createCell(7);
+                                    dayTotalOT += workingHours;
+                                } else {
+                                    weekTotal += workingHours;
                                 }
                                 nightTime.setCellValue(workingHours);
                             }
@@ -197,15 +223,24 @@ public class ShiftService implements ShiftInterface {
                             if (workingHours > 8 && !shift.getRemark().toLowerCase(Locale.ROOT).contains("travel") && calendar.get(Calendar.DAY_OF_WEEK) != 1) { //OT
                                 Cell dayTimeOT = row.createCell(6);
                                 dayTimeOT.setCellValue(workingHours - 8);
+                                dayTotalOT += workingHours - 8;
                                 Cell dayTime = row.createCell(4);
                                 dayTime.setCellValue(8);
-                            } else if (calendar.get(Calendar.DAY_OF_WEEK) == 1) { //OT sun
+                                weekTotal += 8;
+                            } else if (isHoliday) {
+                                Cell dayTimeHoliday = row.createCell(10);
+                                dayTimeHoliday.setCellValue(workingHours);
+                                dayTotalOT += workingHours;
+                            }
+                            else if (calendar.get(Calendar.DAY_OF_WEEK) == 1) { //OT sun
                                 Cell dayTime = row.createCell(8);
                                 dayTime.setCellValue(workingHours);
+                                dayTotalOT += workingHours;
                             }
                             else {
                                 Cell dayTime = row.createCell(4);
                                 dayTime.setCellValue(workingHours);
+                                weekTotal += workingHours;
                             }
                         }
                     }
@@ -213,6 +248,11 @@ public class ShiftService implements ShiftInterface {
                         rowNum++;
                         row = sheet.createRow(rowNum);
                     }
+
+                    Cell dayTotalOTCell = row.createCell(12);
+                    dayTotalOTCell.setCellValue(dayTotalOT);
+                    weekTotalOT += dayTotalOT;
+
 
                     // remark
                     Cell remark = row.createCell(13);
@@ -224,19 +264,34 @@ public class ShiftService implements ShiftInterface {
                     sheet.addMergedRegion(new CellRangeAddress(startRowNum, stopRowNum, 0, 0));
                     sheet.addMergedRegion(new CellRangeAddress(startRowNum, stopRowNum, 1, 1));
                 }
-//                }
-                // Subtotal Row
+
+                // End of week, create sub total
                 if (calendar.get(Calendar.DAY_OF_WEEK) == 1) {
                     rowNum++;
                     Row weekTotalRow = sheet.createRow(rowNum);
-                    Cell weekTotalCel = weekTotalRow.createCell(0);
-                    weekTotalCel.setCellValue("Sub total");
-                    weekTotalCel.setCellStyle(subTotalCellStyle);
+                    Cell subTotal = weekTotalRow.createCell(0);
+                    subTotal.setCellValue("Sub total");
+                    subTotal.setCellStyle(subTotalCellStyle);
                     sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0, 3));
+                    Cell weekTotalHour = weekTotalRow.createCell(4);
+                    weekTotalHour.setCellValue(weekTotal);
+                    sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 4,5));
+
+                    Cell weekTotalOTHour = weekTotalRow.createCell(12);
+                    weekTotalOTHour.setCellValue(weekTotalOT);
+
+                    weekTotalOT = 0; weekTotal = 0;
                 }
                 rowNum++;
                 dayIndex++;
+                dayTotalOT = 0;
             }
+
+            // Total
+            Row total = sheet.createRow(rowNum);
+            total.createCell(0).setCellValue("Total");
+            total.createCell(i)
+
 
             workbook.write(out);
 //            workbook.close();
@@ -266,6 +321,14 @@ public class ShiftService implements ShiftInterface {
     }
 
     private long calculateWorkingHour(Date checkIn, Date checkOut) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(checkIn);
+        int timeCheckIn = calendar.get(Calendar.HOUR_OF_DAY);
+        calendar.setTime(checkOut);
+        int timeCheckOut = calendar.get(Calendar.HOUR_OF_DAY);
+        if (timeCheckIn == 8 && timeCheckOut == 17) {
+            return 8;
+        }
         return Math.floorDiv((checkOut.getTime() - checkIn.getTime()), 3600000);
     }
 }
