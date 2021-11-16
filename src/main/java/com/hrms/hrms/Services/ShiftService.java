@@ -125,7 +125,8 @@ public class ShiftService implements ShiftInterface {
             subTotalCellStyle.setFont(subTotalFont);
 
             int dayTotalOT = 0, weekTotalOT = 0, weekTotal = 0;
-            int wh = 0, nswd = 0, otwd = 0, otnswd = 0, otdo = 0, otnsdo = 0, otph = 0, otnsph = 0, grandTotal = 0;
+            int wh = 0, nswd = 0, otwd = 0, otnswd = 0, otdo = 0, otnsdo = 0, otph = 0, otnsph = 0, grandTotalOT = 0;
+            int annualLeave = 0, compensatoryDay = 0, actualWorkingDays = 0;
             while (dayIndex <= numberOfDays) {
                 Row row = sheet.createRow(rowNum);
 
@@ -140,28 +141,18 @@ public class ShiftService implements ShiftInterface {
 //                row.createCell(1).setCellValue(new SimpleDateFormat("HH:mm").format(calendar));
 
                 List<Shift> shiftInDate = this.shiftRepository.getShiftByEmpIdAndDate(empId, calendar);
-
-                // Checkin, out and working time
-//                if (shiftInDate.size() == 1) {
-//                    if (!Arrays.stream(dayOffs).anyMatch(shiftInDate.get(0).getRemark()::equals)) {
-//                        Cell start = row.createCell(2);
-//                        start.setCellValue(formatHour.format(shiftInDate.get(0).getCheckIn()));
-//
-//                        Cell stop = row.createCell(3);
-//                        stop.setCellValue(formatHour.format(shiftInDate.get(0).getCheckOut()));
-//
-//                        //working hour
-////
-//
-//                        // Cell 4 and 5
-//
-//                    }
-//                }
-//                if (shiftInDate.size() > 1) {
+                if (shiftInDate.size() > 0) {
+                    actualWorkingDays ++;
+                }
                 int startRowNum = rowNum;
                 for (int i = 0; i < shiftInDate.size(); i++) {
 
                     Shift shift = shiftInDate.get(i);
+                    if (shift.getRemark().equals("Annual leave")){
+                        annualLeave++;
+                    } else if (shift.getRemark().equals("Compensatory day")) {
+                        compensatoryDay++;
+                    }
                     if (!Arrays.stream(dayOffs).anyMatch(shift.getRemark()::equals)) {
                         Cell start = row.createCell(2);
                         start.setCellValue(formatHour.format(shift.getCheckIn()));
@@ -182,13 +173,16 @@ public class ShiftService implements ShiftInterface {
                                 Cell nightTimeOT = row.createCell(7);
                                 nightTimeOT.setCellValue(workingHours - 8);
                                 dayTotalOT += workingHours - 8;
+                                otnswd += workingHours - 8;
                                 Cell nightTime = row.createCell(5);
                                 nightTime.setCellValue(8);
                                 weekTotal += 8;
+                                nswd += 8;
                             } else if (isHoliday) { // night holiday
                                 Cell nightTimeHoliday = row.createCell(11);
                                 nightTimeHoliday.setCellValue(workingHours);
                                 dayTotalOT += workingHours;
+                                otnsph += workingHours;
                             }
                             else if (calendar.get(Calendar.DAY_OF_WEEK) == 1 || calendar.get(Calendar.DAY_OF_WEEK) == 7) { // OT Weekend
                                 if (calendar.get(Calendar.DAY_OF_WEEK) == 7) { // sat
@@ -196,16 +190,20 @@ public class ShiftService implements ShiftInterface {
                                         Cell nightTime = row.createCell(5);
                                         nightTime.setCellValue(workingHours);
                                         weekTotal += workingHours;
+                                        nswd += workingHours;
                                     } else {
                                         Cell nightTime = row.createCell(5);
                                         nightTime.setCellValue(2);
                                         weekTotal += 2;
+                                        nswd += 2;
                                         row.createCell(9).setCellValue(workingHours - 2);
+                                        otnsdo += workingHours - 2;
                                         dayTotalOT += workingHours - 2;
                                     }
                                 } else { //sun
                                     row.createCell(9).setCellValue(workingHours);
                                     dayTotalOT += workingHours;
+                                    otnsdo += workingHours;
                                 }
                             }
 
@@ -214,8 +212,10 @@ public class ShiftService implements ShiftInterface {
                                 if (shift.isTrans()) {
                                     nightTime = row.createCell(7);
                                     dayTotalOT += workingHours;
+                                    otnswd += workingHours;
                                 } else {
                                     weekTotal += workingHours;
+                                    nswd += workingHours;
                                 }
                                 nightTime.setCellValue(workingHours);
                             }
@@ -224,39 +224,50 @@ public class ShiftService implements ShiftInterface {
                                 Cell dayTimeOT = row.createCell(6);
                                 dayTimeOT.setCellValue(workingHours - 8);
                                 dayTotalOT += workingHours - 8;
+                                otwd += workingHours - 8;
                                 Cell dayTime = row.createCell(4);
                                 dayTime.setCellValue(8);
                                 weekTotal += 8;
+                                wh += 8;
                             } else if (isHoliday) {
                                 Cell dayTimeHoliday = row.createCell(10);
                                 dayTimeHoliday.setCellValue(workingHours);
                                 dayTotalOT += workingHours;
+                                otph += workingHours;
                             }
                             else if (calendar.get(Calendar.DAY_OF_WEEK) == 1) { //OT sun
                                 Cell dayTime = row.createCell(8);
                                 dayTime.setCellValue(workingHours);
                                 dayTotalOT += workingHours;
+                                otdo += workingHours;
                             }
                             else {
                                 Cell dayTime = row.createCell(4);
                                 dayTime.setCellValue(workingHours);
                                 weekTotal += workingHours;
+                                wh += workingHours;
                             }
                         }
                     }
-                    if (i != shiftInDate.size() - 1) {
-                        rowNum++;
-                        row = sheet.createRow(rowNum);
-                    }
+
 
                     Cell dayTotalOTCell = row.createCell(12);
-                    dayTotalOTCell.setCellValue(dayTotalOT);
+                    if (dayTotalOT == 0) {
+                        dayTotalOTCell.setCellValue("-");
+                    } else {
+                        dayTotalOTCell.setCellValue(dayTotalOT);
+                    }
                     weekTotalOT += dayTotalOT;
-
+                    dayTotalOT = 0;
 
                     // remark
                     Cell remark = row.createCell(13);
                     remark.setCellValue(shift.getRemark());
+
+                    if (i != shiftInDate.size() - 1) {
+                        rowNum++;
+                        row = sheet.createRow(rowNum);
+                    }
                 }
                 int stopRowNum = rowNum;
 
@@ -278,20 +289,74 @@ public class ShiftService implements ShiftInterface {
                     sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 4,5));
 
                     Cell weekTotalOTHour = weekTotalRow.createCell(12);
-                    weekTotalOTHour.setCellValue(weekTotalOT);
-
+                    if (weekTotalOT == 0) {
+                        weekTotalOTHour.setCellValue("-");
+                    } else {
+                        weekTotalOTHour.setCellValue(weekTotalOT);
+                    }
                     weekTotalOT = 0; weekTotal = 0;
                 }
                 rowNum++;
                 dayIndex++;
-                dayTotalOT = 0;
+
             }
 
             // Total
             Row total = sheet.createRow(rowNum);
             total.createCell(0).setCellValue("Total");
-            total.createCell(i)
+            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0,3));
+            total.createCell(4).setCellValue(wh);
+            total.createCell(5).setCellValue(nswd);
+            total.createCell(6).setCellValue(otwd);
+            total.createCell(7).setCellValue(otnswd);
+            total.createCell(8).setCellValue(otdo);
+            total.createCell(9).setCellValue(otnsdo);
+            total.createCell(10).setCellValue(otph);
+            total.createCell(11).setCellValue(otnsph);
+            grandTotalOT = otwd + otnswd + otdo + otnsdo + otph + otnsph;
+            total.createCell(12).setCellValue(grandTotalOT);
 
+            rowNum++;
+            Row grandTitle = sheet.createRow(rowNum);
+            grandTitle.createCell(0);
+            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0,3));
+            grandTitle.createCell(4).setCellValue("WH");
+            grandTitle.createCell(5).setCellValue("NSWD");
+            grandTitle.createCell(6).setCellValue("OTWD");
+            grandTitle.createCell(7).setCellValue("OTNSWD");
+            grandTitle.createCell(8).setCellValue("OTDO");
+            grandTitle.createCell(9).setCellValue("OTNSDO");
+            grandTitle.createCell(10).setCellValue("OTPH");
+            grandTitle.createCell(11).setCellValue("OTNSPH");
+            grandTitle.createCell(12).setCellValue("TOTAL");
+
+            rowNum++;
+            Row annualLeaveRow = sheet.createRow(rowNum);
+            annualLeaveRow.createCell(0).setCellValue("Annual Leave day/Số ngày nghỉ phép");
+            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0,10));
+            annualLeaveRow.createCell(11).setCellValue(annualLeave);
+            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 11,12));
+
+            rowNum++;
+            Row compensatoryRow = sheet.createRow(rowNum);
+            compensatoryRow.createCell(0).setCellValue("Compensatory day used in month/Số ngày nghỉ bù đã sử dụng trong tháng");
+            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0,10));
+            compensatoryRow.createCell(11).setCellValue(compensatoryDay);
+            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 11,12));
+
+            rowNum++;
+            Row compensatoryBalanceRow = sheet.createRow(rowNum);
+            compensatoryBalanceRow.createCell(0).setCellValue("Compensatory day balance/Số ngày nghỉ bù còn lại");
+            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0,10));
+            compensatoryBalanceRow.createCell(11).setCellValue("-");
+            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 11,12));
+
+            rowNum++;
+            Row actualWorkingDaysRow = sheet.createRow(rowNum);
+            actualWorkingDaysRow.createCell(0).setCellValue("Actual working day/Số ngày làm việc thực tế");
+            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0,10));
+            actualWorkingDaysRow.createCell(11).setCellValue(actualWorkingDays);
+            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 11,12));
 
             workbook.write(out);
 //            workbook.close();
