@@ -122,7 +122,15 @@ public class ShiftService implements ShiftInterface {
             subTotalCellStyle.setAlignment(HorizontalAlignment.CENTER);
             String[] dayOffs = new String[]{"Annual leave", "Compensatory day"};
 
+            CellStyle wrapTextStyle = workbook.createCellStyle();
+            wrapTextStyle.setWrapText(true);
+
             subTotalCellStyle.setFont(subTotalFont);
+
+            sheet.getRow(1).getCell(2).setCellValue(Helper.getMonthByShortNameForInt(month - 1));
+            sheet.getRow(2).getCell(2).setCellValue(year);
+            sheet.getRow(3).getCell(3).setCellValue(emp.get().getName());
+
 
             int dayTotalOT = 0, weekTotalOT = 0, weekTotal = 0;
             int wh = 0, nswd = 0, otwd = 0, otnswd = 0, otdo = 0, otnsdo = 0, otph = 0, otnsph = 0, grandTotalOT = 0;
@@ -357,6 +365,72 @@ public class ShiftService implements ShiftInterface {
             sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0,10));
             actualWorkingDaysRow.createCell(11).setCellValue(actualWorkingDays);
             sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 11,12));
+
+            rowNum++;
+            Row forHRTitle = sheet.createRow(rowNum);
+            forHRTitle.createCell(0).setCellValue("For HR");
+            forHRTitle.createCell(1).setCellValue("Night shift (hour)");
+            forHRTitle.createCell(4).setCellValue("OT (hour)");
+            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum+2, 0,0));
+            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 1,3));
+            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 4,9));
+
+            rowNum++;
+            Row forHRSubTitle = sheet.createRow(rowNum);
+            forHRSubTitle.createCell(1).setCellValue("NSWD");
+            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 1,3));
+            forHRSubTitle.createCell(4).setCellValue("NSPH");
+            forHRSubTitle.createCell(5).setCellValue("WD");
+            forHRSubTitle.createCell(6).setCellValue("DO");
+            forHRSubTitle.createCell(7).setCellValue("NS");
+            forHRSubTitle.createCell(8).setCellValue("NSDO");
+            forHRSubTitle.createCell(9).setCellValue("PH");
+
+            rowNum++;
+            Row forHRValue = sheet.createRow(rowNum);
+            forHRValue.createCell(1).setCellValue(nswd);
+            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 1,3));
+            forHRValue.createCell(4).setCellValue(otnsph);
+            forHRValue.createCell(5).setCellValue(otwd);
+            forHRValue.createCell(6).setCellValue(otdo);
+            forHRValue.createCell(7).setCellValue(otnswd);
+            forHRValue.createCell(8).setCellValue(otnsdo);
+            forHRValue.createCell(9).setCellValue(otph);
+
+            rowNum++;
+            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0,13));
+
+            rowNum++;
+            Row empSign = sheet.createRow(rowNum);
+            empSign.setHeight((short) -1);
+            Cell empSignCell = empSign.createCell(0);
+            empSignCell.setCellStyle(wrapTextStyle);
+            empSign.createCell(0).setCellValue("Prepared by employees (Sign & Name)\t\t\t\t\t\t\tDate:_____/______/______   \n\n\nName:");
+            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0,13));
+
+            rowNum++;
+            Row deptHeadSign = sheet.createRow(rowNum);
+            deptHeadSign.setHeight((short) -1);
+            Cell deptHeadSignCell = deptHeadSign.createCell(0);
+            deptHeadSignCell.setCellStyle(wrapTextStyle);
+            deptHeadSign.createCell(0).setCellValue("Checked by Dept Head (Sign & Name)\t\t\t\t\t\t\tDate:_____/______/______\n\n\nName: Huynh Thi Thuy An");
+            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0,13));
+
+            rowNum++;
+            Row hrSign = sheet.createRow(rowNum);
+            hrSign.setHeight((short) -1);
+            Cell hrSignCell = hrSign.createCell(0);
+            hrSignCell.setCellStyle(wrapTextStyle);
+            hrSign.createCell(0).setCellValue("HR (Sign & Name)\t\t\t\t\t\t\tDate:_____/______/______\n\n\nName: Nguyen Minh Lan Anh");
+            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0,13));
+
+            rowNum++;
+            Row note = sheet.createRow(rowNum);
+            note.setHeight((short) -1);
+            Cell noteCell = note.createCell(0);
+            noteCell.setCellStyle(wrapTextStyle);
+            noteCell.setCellValue("Notes:\n- Night Shift: from 22:00 - 06:00./Ca đêm: từ 22:00 đến 6:00\n- Weekend: after work 4hrs on Saturday and full Sunday./Cuối tuần: sau khi làm đủ 4 tiếng Thứ Bảy và nguyên ngày Chủ Nhật");
+            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0,13));
 
             workbook.write(out);
 //            workbook.close();

@@ -9,6 +9,11 @@ public class Helper {
         return monthNames[num];
     }
 
+    public static String getMonthByShortNameForInt(int num) {
+        String[] monthNames = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+        return monthNames[num];
+    }
+
     public static SimpleDateFormat dateTimeFormatter = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 
     public static String getDayName(int day) {
