@@ -67,15 +67,15 @@ public class ShiftService implements ShiftInterface {
                 splitPoint.set(Calendar.SECOND, 0);
 
                 Date splitPointTime = splitPoint.getTime();
-                Shift firstPart = new Shift(shift.getCheckIn(), splitPointTime, shift.getRemark(), emp.get(), false);
+                Shift firstPart = new Shift(shift.getCheckIn(), splitPointTime, shift.getRemark(), false, shift.isAddin(), shift.isLunchTime(), emp.get());
                 shiftRepository.save(firstPart);
                 shifts.add(firstPart);
 
-                Shift secondPart = new Shift(splitPointTime, shift.getCheckOut(), shift.getRemark(), emp.get(), true);
+                Shift secondPart = new Shift(splitPointTime, shift.getCheckOut(), shift.getRemark(), true, shift.isAddin(), shift.isLunchTime(), emp.get());
                 shiftRepository.save(secondPart);
                 shifts.add(secondPart);
             } else {
-                Shift newShift = new Shift(shift.getCheckIn(), shift.getCheckOut(), shift.getRemark(), emp.get(), false);
+                Shift newShift = new Shift(shift.getCheckIn(), shift.getCheckOut(), shift.getRemark(), false, shift.isAddin(), shift.isLunchTime(),  emp.get());
                 Shift result = shiftRepository.save(newShift);
                 shifts.add(result);
             }
@@ -154,7 +154,7 @@ public class ShiftService implements ShiftInterface {
                 }
                 int startRowNum = rowNum;
                 for (int i = 0; i < shiftInDate.size(); i++) {
-
+                    long addInHour = 0;
                     Shift shift = shiftInDate.get(i);
                     if (shift.getRemark().equals("Annual leave")){
                         annualLeave++;
@@ -172,7 +172,7 @@ public class ShiftService implements ShiftInterface {
                         checkIn.setTime(shift.getCheckIn());
                         Calendar checkOut = Calendar.getInstance();
                         checkOut.setTime(shift.getCheckOut());
-                        long workingHours = calculateWorkingHour(shift.getCheckIn(), shift.getCheckOut());
+                        long workingHours = calculateWorkingHour(shift.getCheckIn(), shift.getCheckOut(), shift.isLunchTime());
 
                         boolean isHoliday = holidayRepository.isHoliday(checkIn.get(Calendar.DAY_OF_MONTH), checkIn.get(Calendar.MONTH) + 1, checkIn.get(Calendar.YEAR));
 
@@ -222,8 +222,14 @@ public class ShiftService implements ShiftInterface {
                                     dayTotalOT += workingHours;
                                     otnswd += workingHours;
                                 } else {
-                                    weekTotal += workingHours;
-                                    nswd += workingHours;
+                                    if (shift.isAddin()) {
+                                        addInHour = 8 - workingHours;
+                                        weekTotal += 8;
+                                        nswd += 8;
+                                    } else {
+                                        weekTotal += workingHours;
+                                        nswd += workingHours;
+                                    }
                                 }
                                 nightTime.setCellValue(workingHours);
                             }
@@ -252,8 +258,14 @@ public class ShiftService implements ShiftInterface {
                             else {
                                 Cell dayTime = row.createCell(4);
                                 dayTime.setCellValue(workingHours);
-                                weekTotal += workingHours;
-                                wh += workingHours;
+                                if (shift.isAddin()) {
+                                    addInHour = 8 - workingHours;
+                                    weekTotal += 8;
+                                    wh += 8;
+                                } else {
+                                    weekTotal += workingHours;
+                                    wh += workingHours;
+                                }
                             }
                         }
                     }
@@ -268,8 +280,16 @@ public class ShiftService implements ShiftInterface {
                     weekTotalOT += dayTotalOT;
                     dayTotalOT = 0;
 
+                    //lunch time
+                    Cell lunchTime = row.createCell(13);
+                    lunchTime.setCellValue(shift.isLunchTime() ? "x" : "");
+
+                    //add-in
+                    Cell addIn = row.createCell(14);
+                    addIn.setCellValue(addInHour == 0 ? "-" : String.valueOf(addInHour));
+
                     // remark
-                    Cell remark = row.createCell(13);
+                    Cell remark = row.createCell(15);
                     remark.setCellValue(shift.getRemark());
 
                     if (i != shiftInDate.size() - 1) {
@@ -454,20 +474,20 @@ public class ShiftService implements ShiftInterface {
             shift.setCheckIn(shiftDTO.getCheckIn());
             shift.setCheckOut(shiftDTO.getCheckOut());
             shift.setRemark(shiftDTO.getRemark());
+            shift.setAddin(shiftDTO.isAddin());
+            shift.setLunchTime(shiftDTO.isLunchTime());
             return this.shiftRepository.save(shift);
         }
         return null;
     }
 
-    private long calculateWorkingHour(Date checkIn, Date checkOut) {
+    private long calculateWorkingHour(Date checkIn, Date checkOut, boolean isLunchTime) {
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(checkIn);
         int timeCheckIn = calendar.get(Calendar.HOUR_OF_DAY);
         calendar.setTime(checkOut);
         int timeCheckOut = calendar.get(Calendar.HOUR_OF_DAY);
-        if (timeCheckIn == 8 && timeCheckOut == 17) {
-            return 8;
-        }
-        return Math.floorDiv((checkOut.getTime() - checkIn.getTime()), 3600000);
+        long workingHour = Math.floorDiv((checkOut.getTime() - checkIn.getTime()), 3600000);
+        return isLunchTime ? workingHour - 1 : workingHour;
     }
 }

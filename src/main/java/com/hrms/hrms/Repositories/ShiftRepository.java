@@ -19,7 +19,7 @@ public interface ShiftRepository extends JpaRepository<Shift, Long> {
     @Query(value = "delete from shift where emp_id = :emp_id", nativeQuery = true)
     void deleteByEmpId(@Param("emp_id")long empId);
 
-    @Query(value = "select * from shift where emp_id = :emp_id", nativeQuery = true)
+    @Query(value = "select * from shift where emp_id = :emp_id order by checkin asc", nativeQuery = true)
     List<Shift> getShiftByEmpId(@Param("emp_id") long empId);
 
     @Query(value = "select * from shift where emp_id = :emp_id and cast(checkin as date) = :date", nativeQuery = true)

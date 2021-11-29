@@ -8,15 +8,20 @@ public class ShiftDTO {
     private Date checkOut;
     private String remark;
     private long empId;
+    private boolean isAddin;
+    private boolean isLunchTime;
 
-    public ShiftDTO(Date checkIn, Date checkOut, String remark, long empId) {
+    public ShiftDTO() {
+    }
+
+    public ShiftDTO(Date checkIn, Date checkOut, String remark, long empId, boolean isAddin, boolean isLunchTime) {
         this.checkIn = checkIn;
         this.checkOut = checkOut;
         this.remark = remark;
         this.empId = empId;
+        this.isAddin = isAddin;
+        this.isLunchTime = isLunchTime;
     }
-
-    public ShiftDTO() {}
 
     public Date getCheckIn() {
         return checkIn;
@@ -48,5 +53,21 @@ public class ShiftDTO {
 
     public void setEmpId(long empId) {
         this.empId = empId;
+    }
+
+    public boolean isAddin() {
+        return isAddin;
+    }
+
+    public void setAddin(boolean addin) {
+        isAddin = addin;
+    }
+
+    public boolean isLunchTime() {
+        return isLunchTime;
+    }
+
+    public void setLunchTime(boolean lunchTime) {
+        isLunchTime = lunchTime;
     }
 }

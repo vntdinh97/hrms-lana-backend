@@ -28,16 +28,24 @@ public class Shift implements Serializable {
     @Column(name = "trans", nullable = true)
     private boolean trans;
 
+    @Column(name = "is_add_in", nullable = true)
+    private boolean isAddin;
+
+    @Column(name = "is_lunch_time", nullable = true)
+    private boolean isLunchTime;
+
     @ManyToOne
     @JoinColumn(name = "empId", nullable = false)
     private Employee employee;
 
-    public Shift(Date checkIn, Date checkOut, String remark, Employee employee, boolean trans) {
+    public Shift(Date checkIn, Date checkOut, String remark, boolean trans, boolean isAddin, boolean isLunchTime, Employee employee) {
         this.checkIn = checkIn;
         this.checkOut = checkOut;
         this.remark = remark;
-        this.employee = employee;
         this.trans = trans;
+        this.isAddin = isAddin;
+        this.isLunchTime = isLunchTime;
+        this.employee = employee;
     }
 
     public boolean isTrans() {
@@ -85,6 +93,22 @@ public class Shift implements Serializable {
 
     public Employee getEmployee() {
         return employee;
+    }
+
+    public boolean isAddin() {
+        return isAddin;
+    }
+
+    public void setAddin(boolean addin) {
+        isAddin = addin;
+    }
+
+    public boolean isLunchTime() {
+        return isLunchTime;
+    }
+
+    public void setLunchTime(boolean lunchTime) {
+        isLunchTime = lunchTime;
     }
 
     public void setEmployee(Employee employee) {
