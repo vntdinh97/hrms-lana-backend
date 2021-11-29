@@ -16,22 +16,22 @@ public class Shift implements Serializable {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private long shiftId;
 
-    @Column(name = "checkin")
+    @Column(name = "checkin", nullable = false)
     private Date checkIn;
 
-    @Column(name = "checkout")
+    @Column(name = "checkout", nullable = false)
     private Date checkOut;
 
-    @Column(name = "remark", nullable = true)
+    @Column(name = "remark")
     private String remark;
 
-    @Column(name = "trans", nullable = true)
+    @Column(name = "trans")
     private boolean trans;
 
-    @Column(name = "is_add_in", nullable = true)
+    @Column(name = "is_add_in")
     private boolean isAddin;
 
-    @Column(name = "is_lunch_time", nullable = true)
+    @Column(name = "is_lunch_time")
     private boolean isLunchTime;
 
     @ManyToOne

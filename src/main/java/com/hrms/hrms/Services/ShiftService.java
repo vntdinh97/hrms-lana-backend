@@ -59,7 +59,7 @@ public class ShiftService implements ShiftInterface {
             boolean isHoliday = holidayRepository.isHoliday(checkIn.get(Calendar.DAY_OF_MONTH), checkIn.get(Calendar.MONTH) + 1, checkIn.get(Calendar.YEAR))
                     || holidayRepository.isHoliday(checkOut.get(Calendar.DAY_OF_MONTH), checkOut.get(Calendar.MONTH) + 1, checkOut.get(Calendar.YEAR));
 
-            if (checkIn.get(Calendar.DAY_OF_MONTH) != checkOut.get(Calendar.DAY_OF_MONTH) && (checkIn.get(Calendar.DAY_OF_WEEK) == 1 || isHoliday)) {
+            if (checkIn.get(Calendar.DAY_OF_MONTH) != checkOut.get(Calendar.DAY_OF_MONTH) && (checkIn.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY || isHoliday)) {
                 Calendar splitPoint = Calendar.getInstance();
                 splitPoint.setTime(shift.getCheckOut());
                 splitPoint.set(Calendar.HOUR_OF_DAY, 0);
@@ -87,9 +87,7 @@ public class ShiftService implements ShiftInterface {
     @Override
     public Shift deleteShift(long shiftId) {
         Optional<Shift> shift = this.shiftRepository.findById(shiftId);
-        if (shift.isPresent()) {
-            this.shiftRepository.delete(shift.get());
-        }
+        if (shift.isPresent()) this.shiftRepository.delete(shift.get());
         return null;
     }
 
@@ -104,7 +102,7 @@ public class ShiftService implements ShiftInterface {
         try (
                 InputStream inp = new FileInputStream("src/main/java/com/hrms/hrms/Utils/Template.xlsx");
                 Workbook workbook = WorkbookFactory.create(inp);
-                ByteArrayOutputStream out = new ByteArrayOutputStream();) {
+                ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.getSheetAt(0);
 
             int numberOfDays = YearMonth.of(year, month).lengthOfMonth();
@@ -133,7 +131,7 @@ public class ShiftService implements ShiftInterface {
 
 
             int dayTotalOT = 0, weekTotalOT = 0, weekTotal = 0;
-            int wh = 0, nswd = 0, otwd = 0, otnswd = 0, otdo = 0, otnsdo = 0, otph = 0, otnsph = 0, grandTotalOT = 0;
+            int wh = 0, nswd = 0, otwd = 0, otnswd = 0, otdo = 0, otnsdo = 0, otph = 0, otnsph = 0, grandTotalOT;
             int annualLeave = 0, compensatoryDay = 0, actualWorkingDays = 0;
             while (dayIndex <= numberOfDays) {
                 Row row = sheet.createRow(rowNum);
@@ -192,8 +190,8 @@ public class ShiftService implements ShiftInterface {
                                 dayTotalOT += workingHours;
                                 otnsph += workingHours;
                             }
-                            else if (calendar.get(Calendar.DAY_OF_WEEK) == 1 || calendar.get(Calendar.DAY_OF_WEEK) == 7) { // OT Weekend
-                                if (calendar.get(Calendar.DAY_OF_WEEK) == 7) { // sat
+                            else if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY || calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY) { // OT Weekend
+                                if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY) { // sat
                                     if (workingHours <= 2) {
                                         Cell nightTime = row.createCell(5);
                                         nightTime.setCellValue(workingHours);
@@ -234,7 +232,7 @@ public class ShiftService implements ShiftInterface {
                                 nightTime.setCellValue(workingHours);
                             }
                         } else { // daytime shift
-                            if (workingHours > 8 && !shift.getRemark().toLowerCase(Locale.ROOT).contains("travel") && calendar.get(Calendar.DAY_OF_WEEK) != 1) { //OT
+                            if (workingHours > 8 && !shift.getRemark().toLowerCase(Locale.ROOT).contains("travel") && calendar.get(Calendar.DAY_OF_WEEK) != Calendar.SUNDAY) { //OT
                                 Cell dayTimeOT = row.createCell(6);
                                 dayTimeOT.setCellValue(workingHours - 8);
                                 dayTotalOT += workingHours - 8;
@@ -249,7 +247,7 @@ public class ShiftService implements ShiftInterface {
                                 dayTotalOT += workingHours;
                                 otph += workingHours;
                             }
-                            else if (calendar.get(Calendar.DAY_OF_WEEK) == 1) { //OT sun
+                            else if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) { //OT sun
                                 Cell dayTime = row.createCell(8);
                                 dayTime.setCellValue(workingHours);
                                 dayTotalOT += workingHours;
@@ -305,7 +303,7 @@ public class ShiftService implements ShiftInterface {
                 }
 
                 // End of week, create sub total
-                if (calendar.get(Calendar.DAY_OF_WEEK) == 1) {
+                if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
                     rowNum++;
                     Row weekTotalRow = sheet.createRow(rowNum);
                     Cell subTotal = weekTotalRow.createCell(0);
