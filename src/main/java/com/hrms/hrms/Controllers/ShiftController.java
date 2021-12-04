@@ -60,6 +60,11 @@ public class ShiftController {
                 .body(file);
     }
 
+    @GetMapping("getShiftByMonthAndYear/{empId}/{year}/{month}")
+    public ResponseEntity<List<Shift>> exportAllShift(@PathVariable long empId, @PathVariable int year, @PathVariable int month) {
+        return new ResponseEntity<List<Shift>>(shiftInterface.getShiftsByEmpIdAndMonthYear(empId, year, month), HttpStatus.OK);
+    }
+
     @PutMapping("/edit/{shiftId}")
     public ResponseEntity<Shift> editShift(@PathVariable long shiftId, @RequestBody ShiftDTO shift) {
         return new ResponseEntity<Shift>(shiftInterface.editShift(shiftId, shift), HttpStatus.OK);

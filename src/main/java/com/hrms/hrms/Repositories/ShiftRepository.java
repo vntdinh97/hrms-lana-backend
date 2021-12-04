@@ -24,4 +24,7 @@ public interface ShiftRepository extends JpaRepository<Shift, Long> {
 
     @Query(value = "select * from shift where emp_id = :emp_id and cast(checkin as date) = :date", nativeQuery = true)
     List<Shift> getShiftByEmpIdAndDate(@Param("emp_id") long empId, @Param("date") Calendar date);
+
+    @Query(value = "select * from shift where emp_id = :emp_id and checkin BETWEEN :start_date AND :end_date", nativeQuery = true)
+    List<Shift> getShiftBetweenDates(@Param("start_date") Calendar startDate, @Param("end_date") Calendar endDate, @Param("emp_id") long empId);
 }

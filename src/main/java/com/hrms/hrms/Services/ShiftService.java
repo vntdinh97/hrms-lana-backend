@@ -596,6 +596,21 @@ public class ShiftService implements ShiftInterface {
         return null;
     }
 
+    @Override
+    public List<Shift> getShiftsByEmpIdAndMonthYear(long empId, int year, int month) {
+        Optional<Employee> employeeOptional = this.employeeRepository.findById(empId);
+        if (!employeeOptional.isPresent()) {
+            return null;
+        }
+        int numberOfDays = YearMonth.of(year, month).lengthOfMonth();
+        Calendar startDate = Calendar.getInstance();
+        startDate.set(year, month - 1, 1);
+        Calendar endDate = Calendar.getInstance();
+        endDate.set(year, month - 1, numberOfDays);
+        return this.shiftRepository.getShiftBetweenDates(startDate, endDate, empId);
+    }
+
+
     private long calculateWorkingHour(Date checkIn, Date checkOut, boolean isLunchTime) {
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(checkIn);
