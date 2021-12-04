@@ -36,6 +36,7 @@ public class ExcelHelper {
             int rowNum = 7, celNum = 0, dayIndex = 1;
             while (dayIndex <= numberOfDays) {
                 Row row = sheet.createRow(rowNum);
+                row.setHeight((short) 400);
                 Cell dayOfMonth = row.createCell(0);
                 dayOfMonth.setCellValue(dayIndex);
 
@@ -95,5 +96,138 @@ public class ExcelHelper {
         } catch (IOException e) {
             throw new RuntimeException("Fail to import data to Excel file: " + e.getMessage());
         }
+    }
+
+    public static CellStyle borderStyle(Workbook wb) {
+        CellStyle style = wb.createCellStyle();
+        style.setBorderBottom(BorderStyle.THIN);
+        style.setBorderLeft(BorderStyle.THIN);
+        style.setBorderRight(BorderStyle.THIN);
+        style.setBorderTop(BorderStyle.THIN);
+
+        return style;
+    }
+
+    public static CellStyle borderStyleWithAlignCenter(Workbook wb) {
+        CellStyle style = wb.createCellStyle();
+        style.setBorderBottom(BorderStyle.THIN);
+        style.setBorderLeft(BorderStyle.THIN);
+        style.setBorderRight(BorderStyle.THIN);
+        style.setBorderTop(BorderStyle.THIN);
+        style.setAlignment(HorizontalAlignment.CENTER);
+
+        return style;
+    }
+
+    public static CellStyle saturdayStyle(Workbook wb) {
+        Sheet sheet = wb.getSheetAt(1);
+        Row row = sheet.getRow(22);
+        Cell cell = row.getCell(1);
+        return cell.getCellStyle();
+    }
+
+    public static CellStyle sundayStyle(Workbook wb) {
+        Sheet sheet = wb.getSheetAt(1);
+        Row row = sheet.getRow(23);
+        Cell cell = row.getCell(1);
+        return cell.getCellStyle();
+    }
+
+    public static CellStyle signStyle(Workbook wb) {
+        Sheet sheet = wb.getSheetAt(1);
+        Row row = sheet.getRow(17);
+        Cell cell = row.getCell(0);
+        CellStyle style = cell.getCellStyle();
+        style.setBorderBottom(BorderStyle.THIN);
+        style.setBorderLeft(BorderStyle.THIN);
+        style.setBorderRight(BorderStyle.THIN);
+        style.setBorderTop(BorderStyle.THIN);
+        return style;
+    }
+
+    public static RichTextString getRichTextStringCellValue(int rowAddress, Workbook wb) {
+        Sheet sheet = wb.getSheetAt(1);
+        Row row = sheet.getRow(rowAddress);
+        Cell cell = row.getCell(0);
+        return cell.getRichStringCellValue();
+    }
+
+    public static CellStyle subTotalStyle(Workbook workbook) {
+        Sheet sheet = workbook.getSheetAt(1);
+        Row row = sheet.getRow(24);
+        Cell cell = row.getCell(0);
+        CellStyle style = cell.getCellStyle();
+        style.setBorderBottom(BorderStyle.THIN);
+        style.setBorderLeft(BorderStyle.THIN);
+        style.setBorderRight(BorderStyle.THIN);
+        style.setBorderTop(BorderStyle.THIN);
+        return style;
+    }
+
+    public static CellStyle totalStyle(Workbook workbook) {
+        Sheet sheet = workbook.getSheetAt(1);
+        Row row = sheet.getRow(7);
+        Cell cell = row.getCell(0);
+        CellStyle style = cell.getCellStyle();
+        style.setBorderBottom(BorderStyle.THIN);
+        style.setBorderLeft(BorderStyle.THIN);
+        style.setBorderRight(BorderStyle.THIN);
+        style.setBorderTop(BorderStyle.THIN);
+        return style;
+    }
+
+    public static CellStyle oddGrandTitleStyle(Workbook workbook) {
+        Sheet sheet = workbook.getSheetAt(1);
+        Row row = sheet.getRow(8);
+        Cell cell = row.getCell(5);
+        CellStyle style = cell.getCellStyle();
+        style.setBorderBottom(BorderStyle.THIN);
+        style.setBorderLeft(BorderStyle.THIN);
+        style.setBorderRight(BorderStyle.THIN);
+        style.setBorderTop(BorderStyle.THIN);
+        return style;
+    }
+
+    public static CellStyle evenGrandTitleStyle(Workbook workbook) {
+        Sheet sheet = workbook.getSheetAt(1);
+        Row row = sheet.getRow(8);
+        Cell cell = row.getCell(6);
+        CellStyle style = cell.getCellStyle();
+        style.setBorderBottom(BorderStyle.THIN);
+        style.setBorderLeft(BorderStyle.THIN);
+        style.setBorderRight(BorderStyle.THIN);
+        style.setBorderTop(BorderStyle.THIN);
+        return style;
+    }
+
+    public static CellStyle grandTotalStyle(Workbook workbook) {
+        Sheet sheet = workbook.getSheetAt(1);
+        Row row = sheet.getRow(8);
+        Cell cell = row.getCell(12);
+        CellStyle style = cell.getCellStyle();
+        style.setBorderBottom(BorderStyle.THIN);
+        style.setBorderLeft(BorderStyle.THIN);
+        style.setBorderRight(BorderStyle.THIN);
+        style.setBorderTop(BorderStyle.THIN);
+        return style;
+    }
+
+    public static CellStyle statisticalStyle(Workbook workbook) {
+        Sheet sheet = workbook.getSheetAt(1);
+        Row row = sheet.getRow(9);
+        Cell cell = row.getCell(0);
+        CellStyle style = cell.getCellStyle();
+        style.setBorderBottom(BorderStyle.THIN);
+        style.setBorderLeft(BorderStyle.THIN);
+        style.setBorderRight(BorderStyle.THIN);
+        style.setBorderTop(BorderStyle.THIN);
+        return style;
+    }
+
+    public static CellStyle forHRStyle(Workbook workbook, int rowIndex, int cellIndex) {
+        Sheet sheet = workbook.getSheetAt(1);
+        Row row = sheet.getRow(rowIndex + 13);
+        Cell cell = row.getCell(cellIndex);
+        return cell.getCellStyle();
     }
 }

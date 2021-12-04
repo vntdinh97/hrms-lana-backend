@@ -15,6 +15,7 @@ import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
 import org.apache.poi.xssf.usermodel.XSSFColor;
+import org.apache.poi.xssf.usermodel.XSSFRichTextString;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -99,31 +100,27 @@ public class ShiftService implements ShiftInterface {
     @Override
     public ByteArrayInputStream exportExcel(long empId, int year, int month) {
         Optional<Employee> emp = employeeRepository.findById(empId);
+        if (!emp.isPresent()) {
+            return null;
+        }
         try (
                 InputStream inp = new FileInputStream("src/main/java/com/hrms/hrms/Utils/Template.xlsx");
                 Workbook workbook = WorkbookFactory.create(inp);
                 ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.getSheetAt(0);
-
+            workbook.setSheetName(0, emp.get().getName());
             int numberOfDays = YearMonth.of(year, month).lengthOfMonth();
             int rowNum = 7, dayIndex = 1;
 
             SimpleDateFormat formatDate = new SimpleDateFormat("yyyy-MM-dd");
             SimpleDateFormat formatHour = new SimpleDateFormat("HH:mm");
-            //Sub total cell style
-            CellStyle subTotalCellStyle = workbook.createCellStyle();
-            Font subTotalFont = workbook.createFont();
-            subTotalFont.setItalic(true);
-            subTotalFont.setBold(true);
-            subTotalFont.setFontName("Calibri");
-            subTotalFont.setFontHeightInPoints((short) 10);
-            subTotalCellStyle.setAlignment(HorizontalAlignment.CENTER);
+
+
             String[] dayOffs = new String[]{"Annual leave", "Compensatory day"};
 
             CellStyle wrapTextStyle = workbook.createCellStyle();
             wrapTextStyle.setWrapText(true);
 
-            subTotalCellStyle.setFont(subTotalFont);
 
             sheet.getRow(1).getCell(2).setCellValue(Helper.getMonthByShortNameForInt(month - 1));
             sheet.getRow(2).getCell(2).setCellValue(year);
@@ -137,19 +134,34 @@ public class ShiftService implements ShiftInterface {
                 Row row = sheet.createRow(rowNum);
 
                 // Day index and day name
-                Cell dayOfMonth = row.createCell(0);
-                dayOfMonth.setCellValue(dayIndex);
 
                 Calendar calendar = Calendar.getInstance();
                 calendar.set(year, month - 1, dayIndex);
+                String dayName = Helper.getDayName(calendar.get(Calendar.DAY_OF_WEEK) - 1);
+                Cell dayOfMonth = row.createCell(0);
+                dayOfMonth.setCellValue(dayIndex);
                 Cell dayOfWeek = row.createCell(1);
-                dayOfWeek.setCellValue(Helper.getDayName(calendar.get(Calendar.DAY_OF_WEEK) - 1));
-//                row.createCell(1).setCellValue(new SimpleDateFormat("HH:mm").format(calendar));
-
+                dayOfWeek.setCellValue(dayName);
+                for (int i = 0; i <= 15; i++) {
+                    Cell cell = row.getCell(i);
+                    if (cell == null) {
+                        cell = row.createCell(i);
+                    }
+                    if (dayName.equals("Sat")) {
+                        cell.setCellStyle(ExcelHelper.saturdayStyle(workbook));
+                    } else if (dayName.equals("Sun")) {
+                        cell.setCellStyle(ExcelHelper.sundayStyle(workbook));
+                    } else if (i == 5 || i == 7 || i == 9 || i == 11) {
+                        cell.setCellStyle(ExcelHelper.saturdayStyle(workbook));
+                    } else {
+                        cell.setCellStyle(ExcelHelper.borderStyleWithAlignCenter(workbook));
+                    }
+                }
                 List<Shift> shiftInDate = this.shiftRepository.getShiftByEmpIdAndDate(empId, calendar);
                 if (shiftInDate.size() > 0) {
                     actualWorkingDays ++;
                 }
+
                 int startRowNum = rowNum;
                 for (int i = 0; i < shiftInDate.size(); i++) {
                     long addInHour = 0;
@@ -160,10 +172,10 @@ public class ShiftService implements ShiftInterface {
                         compensatoryDay++;
                     }
                     if (!Arrays.stream(dayOffs).anyMatch(shift.getRemark()::equals)) {
-                        Cell start = row.createCell(2);
+                        Cell start = row.getCell(2);
                         start.setCellValue(formatHour.format(shift.getCheckIn()));
 
-                        Cell stop = row.createCell(3);
+                        Cell stop = row.getCell(3);
                         stop.setCellValue(formatHour.format(shift.getCheckOut()));
 
                         Calendar checkIn = Calendar.getInstance();
@@ -176,16 +188,16 @@ public class ShiftService implements ShiftInterface {
 
                         if (checkOut.get(Calendar.HOUR_OF_DAY) > 22 || checkOut.get(Calendar.HOUR_OF_DAY) <= 6) { // night shift
                             if (workingHours > 8 && !shift.getRemark().toLowerCase(Locale.ROOT).contains("travel")) { // OT
-                                Cell nightTimeOT = row.createCell(7);
+                                Cell nightTimeOT = row.getCell(7);
                                 nightTimeOT.setCellValue(workingHours - 8);
                                 dayTotalOT += workingHours - 8;
                                 otnswd += workingHours - 8;
-                                Cell nightTime = row.createCell(5);
+                                Cell nightTime = row.getCell(5);
                                 nightTime.setCellValue(8);
                                 weekTotal += 8;
                                 nswd += 8;
                             } else if (isHoliday) { // night holiday
-                                Cell nightTimeHoliday = row.createCell(11);
+                                Cell nightTimeHoliday = row.getCell(11);
                                 nightTimeHoliday.setCellValue(workingHours);
                                 dayTotalOT += workingHours;
                                 otnsph += workingHours;
@@ -193,12 +205,12 @@ public class ShiftService implements ShiftInterface {
                             else if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY || calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY) { // OT Weekend
                                 if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY) { // sat
                                     if (workingHours <= 2) {
-                                        Cell nightTime = row.createCell(5);
+                                        Cell nightTime = row.getCell(5);
                                         nightTime.setCellValue(workingHours);
                                         weekTotal += workingHours;
                                         nswd += workingHours;
                                     } else {
-                                        Cell nightTime = row.createCell(5);
+                                        Cell nightTime = row.getCell(5);
                                         nightTime.setCellValue(2);
                                         weekTotal += 2;
                                         nswd += 2;
@@ -214,9 +226,9 @@ public class ShiftService implements ShiftInterface {
                             }
 
                             else { // normal
-                                Cell nightTime = row.createCell(5);
+                                Cell nightTime = row.getCell(5);
                                 if (shift.isTrans()) {
-                                    nightTime = row.createCell(7);
+                                    nightTime = row.getCell(7);
                                     dayTotalOT += workingHours;
                                     otnswd += workingHours;
                                 } else {
@@ -233,28 +245,28 @@ public class ShiftService implements ShiftInterface {
                             }
                         } else { // daytime shift
                             if (workingHours > 8 && !shift.getRemark().toLowerCase(Locale.ROOT).contains("travel") && calendar.get(Calendar.DAY_OF_WEEK) != Calendar.SUNDAY) { //OT
-                                Cell dayTimeOT = row.createCell(6);
+                                Cell dayTimeOT = row.getCell(6);
                                 dayTimeOT.setCellValue(workingHours - 8);
                                 dayTotalOT += workingHours - 8;
                                 otwd += workingHours - 8;
-                                Cell dayTime = row.createCell(4);
+                                Cell dayTime = row.getCell(4);
                                 dayTime.setCellValue(8);
                                 weekTotal += 8;
                                 wh += 8;
                             } else if (isHoliday) {
-                                Cell dayTimeHoliday = row.createCell(10);
+                                Cell dayTimeHoliday = row.getCell(10);
                                 dayTimeHoliday.setCellValue(workingHours);
                                 dayTotalOT += workingHours;
                                 otph += workingHours;
                             }
                             else if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) { //OT sun
-                                Cell dayTime = row.createCell(8);
+                                Cell dayTime = row.getCell(8);
                                 dayTime.setCellValue(workingHours);
                                 dayTotalOT += workingHours;
                                 otdo += workingHours;
                             }
                             else {
-                                Cell dayTime = row.createCell(4);
+                                Cell dayTime = row.getCell(4);
                                 dayTime.setCellValue(workingHours);
                                 if (shift.isAddin()) {
                                     addInHour = 8 - workingHours;
@@ -269,7 +281,7 @@ public class ShiftService implements ShiftInterface {
                     }
 
 
-                    Cell dayTotalOTCell = row.createCell(12);
+                    Cell dayTotalOTCell = row.getCell(12);
                     if (dayTotalOT == 0) {
                         dayTotalOTCell.setCellValue("-");
                     } else {
@@ -279,15 +291,19 @@ public class ShiftService implements ShiftInterface {
                     dayTotalOT = 0;
 
                     //lunch time
-                    Cell lunchTime = row.createCell(13);
+                    Cell lunchTime = row.getCell(13);
                     lunchTime.setCellValue(shift.isLunchTime() ? "x" : "");
 
                     //add-in
-                    Cell addIn = row.createCell(14);
-                    addIn.setCellValue(addInHour == 0 ? "-" : String.valueOf(addInHour));
+                    Cell addIn = row.getCell(14);
+                    if (addInHour == 0) {
+                        addIn.setCellValue("-");
+                    } else {
+                        addIn.setCellValue(addInHour);
+                    }
 
                     // remark
-                    Cell remark = row.createCell(15);
+                    Cell remark = row.getCell(15);
                     remark.setCellValue(shift.getRemark());
 
                     if (i != shiftInDate.size() - 1) {
@@ -308,19 +324,32 @@ public class ShiftService implements ShiftInterface {
                     Row weekTotalRow = sheet.createRow(rowNum);
                     Cell subTotal = weekTotalRow.createCell(0);
                     subTotal.setCellValue("Sub total");
-                    subTotal.setCellStyle(subTotalCellStyle);
+                    subTotal.setCellStyle(ExcelHelper.subTotalStyle(workbook));
                     sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0, 3));
+                    subTotal.setCellStyle(ExcelHelper.subTotalStyle(workbook));
                     Cell weekTotalHour = weekTotalRow.createCell(4);
                     weekTotalHour.setCellValue(weekTotal);
+                    weekTotalHour.setCellStyle(ExcelHelper.subTotalStyle(workbook));
                     sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 4,5));
+                    weekTotalHour.setCellStyle(ExcelHelper.subTotalStyle(workbook));
+
 
                     Cell weekTotalOTHour = weekTotalRow.createCell(12);
+                    weekTotalOTHour.setCellStyle(ExcelHelper.subTotalStyle(workbook));
                     if (weekTotalOT == 0) {
                         weekTotalOTHour.setCellValue("-");
                     } else {
                         weekTotalOTHour.setCellValue(weekTotalOT);
                     }
                     weekTotalOT = 0; weekTotal = 0;
+
+                    for (int i = 0; i <= 15; i++) {
+                        Cell cell = weekTotalRow.getCell(i);
+                        if (cell == null) {
+                            cell = weekTotalRow.createCell(i);
+                        }
+                        cell.setCellStyle(ExcelHelper.subTotalStyle(workbook));
+                    }
                 }
                 rowNum++;
                 dayIndex++;
@@ -341,6 +370,13 @@ public class ShiftService implements ShiftInterface {
             total.createCell(11).setCellValue(otnsph);
             grandTotalOT = otwd + otnswd + otdo + otnsdo + otph + otnsph;
             total.createCell(12).setCellValue(grandTotalOT);
+            for (int i = 0; i <= 12; i++) {
+                Cell cell = total.getCell(i);
+                if (cell == null) {
+                    cell = total.createCell(i);
+                }
+                cell.setCellStyle(ExcelHelper.totalStyle(workbook));
+            }
 
             rowNum++;
             Row grandTitle = sheet.createRow(rowNum);
@@ -355,6 +391,21 @@ public class ShiftService implements ShiftInterface {
             grandTitle.createCell(10).setCellValue("OTPH");
             grandTitle.createCell(11).setCellValue("OTNSPH");
             grandTitle.createCell(12).setCellValue("TOTAL");
+            for (int i = 0; i <= 12; i++) {
+                Cell cell = grandTitle.getCell(i);
+                if (cell == null) {
+                    cell = grandTitle.createCell(i);
+                    cell.setCellStyle(ExcelHelper.borderStyle(workbook));
+                } else if (i == 5 || i == 7 || i == 9 || i == 11) {
+                    cell.setCellStyle(ExcelHelper.oddGrandTitleStyle(workbook));
+                } else if (i == 6 || i == 8 || i == 10) {
+                    cell.setCellStyle(ExcelHelper.evenGrandTitleStyle(workbook));
+                } else if (i == 12) {
+                    cell.setCellStyle(ExcelHelper.grandTotalStyle(workbook));
+                } else {
+                    cell.setCellStyle(ExcelHelper.totalStyle(workbook));
+                }
+            }
 
             rowNum++;
             Row annualLeaveRow = sheet.createRow(rowNum);
@@ -362,6 +413,13 @@ public class ShiftService implements ShiftInterface {
             sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0,10));
             annualLeaveRow.createCell(11).setCellValue(annualLeave);
             sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 11,12));
+            for (int i = 0; i <= 12; i++) {
+                Cell cell = annualLeaveRow.getCell(i);
+                if (cell == null) {
+                    cell = annualLeaveRow.createCell(i);
+                }
+                cell.setCellStyle(ExcelHelper.statisticalStyle(workbook));
+            }
 
             rowNum++;
             Row compensatoryRow = sheet.createRow(rowNum);
@@ -369,6 +427,13 @@ public class ShiftService implements ShiftInterface {
             sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0,10));
             compensatoryRow.createCell(11).setCellValue(compensatoryDay);
             sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 11,12));
+            for (int i = 0; i <= 12; i++) {
+                Cell cell = compensatoryRow.getCell(i);
+                if (cell == null) {
+                    cell = compensatoryRow.createCell(i);
+                }
+                cell.setCellStyle(ExcelHelper.statisticalStyle(workbook));
+            }
 
             rowNum++;
             Row compensatoryBalanceRow = sheet.createRow(rowNum);
@@ -376,6 +441,13 @@ public class ShiftService implements ShiftInterface {
             sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0,10));
             compensatoryBalanceRow.createCell(11).setCellValue("-");
             sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 11,12));
+            for (int i = 0; i <= 12; i++) {
+                Cell cell = compensatoryBalanceRow.getCell(i);
+                if (cell == null) {
+                    cell = compensatoryBalanceRow.createCell(i);
+                }
+                cell.setCellStyle(ExcelHelper.statisticalStyle(workbook));
+            }
 
             rowNum++;
             Row actualWorkingDaysRow = sheet.createRow(rowNum);
@@ -383,6 +455,13 @@ public class ShiftService implements ShiftInterface {
             sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0,10));
             actualWorkingDaysRow.createCell(11).setCellValue(actualWorkingDays);
             sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 11,12));
+            for (int i = 0; i <= 12; i++) {
+                Cell cell = actualWorkingDaysRow.getCell(i);
+                if (cell == null) {
+                    cell = actualWorkingDaysRow.createCell(i);
+                }
+                cell.setCellStyle(ExcelHelper.statisticalStyle(workbook));
+            }
 
             rowNum++;
             Row forHRTitle = sheet.createRow(rowNum);
@@ -392,6 +471,14 @@ public class ShiftService implements ShiftInterface {
             sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum+2, 0,0));
             sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 1,3));
             sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 4,9));
+
+            for (int i = 0; i <= 9; i++) {
+                Cell cell = forHRTitle.getCell(i);
+                if (cell == null) {
+                    cell = forHRTitle.createCell(i);
+                }
+                cell.setCellStyle(ExcelHelper.forHRStyle(workbook, 0, i));
+            }
 
             rowNum++;
             Row forHRSubTitle = sheet.createRow(rowNum);
@@ -404,6 +491,14 @@ public class ShiftService implements ShiftInterface {
             forHRSubTitle.createCell(8).setCellValue("NSDO");
             forHRSubTitle.createCell(9).setCellValue("PH");
 
+            for (int i = 0; i <= 9; i++) {
+                Cell cell = forHRSubTitle.getCell(i);
+                if (cell == null) {
+                    cell = forHRSubTitle.createCell(i);
+                }
+                cell.setCellStyle(ExcelHelper.forHRStyle(workbook, 1, i));
+            }
+
             rowNum++;
             Row forHRValue = sheet.createRow(rowNum);
             forHRValue.createCell(1).setCellValue(nswd);
@@ -415,41 +510,63 @@ public class ShiftService implements ShiftInterface {
             forHRValue.createCell(8).setCellValue(otnsdo);
             forHRValue.createCell(9).setCellValue(otph);
 
+            for (int i = 0; i <= 9; i++) {
+                Cell cell = forHRValue.getCell(i);
+                if (cell == null) {
+                    cell = forHRValue.createCell(i);
+                }
+                cell.setCellStyle(ExcelHelper.forHRStyle(workbook, 2, i));
+            }
+
             rowNum++;
-            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0,13));
+            sheet.createRow(rowNum);
+            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0,15));
 
             rowNum++;
             Row empSign = sheet.createRow(rowNum);
-            empSign.setHeight((short) -1);
+            empSign.setHeight((short) 1200);
             Cell empSignCell = empSign.createCell(0);
-            empSignCell.setCellStyle(wrapTextStyle);
-            empSign.createCell(0).setCellValue("Prepared by employees (Sign & Name)\t\t\t\t\t\t\tDate:_____/______/______   \n\n\nName:");
-            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0,13));
+            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0,15));
+            empSignCell.setCellValue(ExcelHelper.getRichTextStringCellValue(17, workbook));
 
             rowNum++;
             Row deptHeadSign = sheet.createRow(rowNum);
-            deptHeadSign.setHeight((short) -1);
+            deptHeadSign.setHeight((short) 1200);
             Cell deptHeadSignCell = deptHeadSign.createCell(0);
-            deptHeadSignCell.setCellStyle(wrapTextStyle);
-            deptHeadSign.createCell(0).setCellValue("Checked by Dept Head (Sign & Name)\t\t\t\t\t\t\tDate:_____/______/______\n\n\nName: Huynh Thi Thuy An");
-            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0,13));
+            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0,15));
+            deptHeadSignCell.setCellValue(ExcelHelper.getRichTextStringCellValue(18, workbook));
 
             rowNum++;
             Row hrSign = sheet.createRow(rowNum);
-            hrSign.setHeight((short) -1);
+            hrSign.setHeight((short) 1200);
             Cell hrSignCell = hrSign.createCell(0);
-            hrSignCell.setCellStyle(wrapTextStyle);
-            hrSign.createCell(0).setCellValue("HR (Sign & Name)\t\t\t\t\t\t\tDate:_____/______/______\n\n\nName: Nguyen Minh Lan Anh");
-            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0,13));
+            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0,15));
+            hrSignCell.setCellValue(ExcelHelper.getRichTextStringCellValue(19, workbook));
 
             rowNum++;
             Row note = sheet.createRow(rowNum);
-            note.setHeight((short) -1);
+            note.setHeight((short) 1200);
             Cell noteCell = note.createCell(0);
-            noteCell.setCellStyle(wrapTextStyle);
-            noteCell.setCellValue("Notes:\n- Night Shift: from 22:00 - 06:00./Ca đêm: từ 22:00 đến 6:00\n- Weekend: after work 4hrs on Saturday and full Sunday./Cuối tuần: sau khi làm đủ 4 tiếng Thứ Bảy và nguyên ngày Chủ Nhật");
-            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0,13));
+            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0,15));
+            Font bold = workbook.createFont();
+            bold.setBold(true);
+            RichTextString noteValue = ExcelHelper.getRichTextStringCellValue(20, workbook);
+            noteValue.applyFont(0, 42, bold);
+            noteCell.setCellValue(noteValue);
 
+            for (int i = rowNum - 3; i <= rowNum; i++) {
+                Row row = sheet.getRow(i);
+                for (int j = 0; j <= 15; j++) {
+                    Cell cell = row.getCell(j);
+                    if (cell == null) {
+                        cell = row.createCell(j);
+                    }
+                    cell.setCellStyle(ExcelHelper.signStyle(workbook));
+                }
+            }
+
+            workbook.removeSheetAt(1);
+            workbook.removeSheetAt(1);
             workbook.write(out);
 //            workbook.close();
 
@@ -482,9 +599,7 @@ public class ShiftService implements ShiftInterface {
     private long calculateWorkingHour(Date checkIn, Date checkOut, boolean isLunchTime) {
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(checkIn);
-        int timeCheckIn = calendar.get(Calendar.HOUR_OF_DAY);
         calendar.setTime(checkOut);
-        int timeCheckOut = calendar.get(Calendar.HOUR_OF_DAY);
         long workingHour = Math.floorDiv((checkOut.getTime() - checkIn.getTime()), 3600000);
         return isLunchTime ? workingHour - 1 : workingHour;
     }
